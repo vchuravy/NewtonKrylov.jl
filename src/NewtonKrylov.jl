@@ -108,8 +108,8 @@ function newton_krylov!(F!, u, res;
                         tol_abs=1e-12,
                         max_niter = 50,
                         η_max::Union{Real,Nothing} = 0.9999,
-                        verbose = false,
-                        solver = :cg)
+                        verbose = 0,
+                        Solver = CgSolver)
     F!(res, u) # res = F(u)
     n_res = norm(res)
     tol = tol_rel * n_res + tol_abs
@@ -121,30 +121,18 @@ function newton_krylov!(F!, u, res;
         η = η_max
     end
 
-    verbose && @info "Jacobian-Free Newton-Krylov" solver res₀=n_res tol tol_rel tol_abs η 
+    verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀=n_res tol tol_rel tol_abs η 
     
     J = JacobianOperator(F!, res, u)
-    solver = if solver == :cg
-        CgSolver(size(J)..., typeof(u))
-    elseif solver == :cgne
-        # CgneSolver currently explodes
-        CgneSolver(size(J)..., typeof(u))
-    elseif solver == :gmres
-        GmresSolver(size(J)..., #=memory=# 20, typeof(u))
-    elseif solver == :bicgstab
-        BicgstabSolver(size(J)..., typeof(u))
-    else
-        throw(ArgumentError("Unknown solver: $solver"))
-    end
+    solver = Solver(J, res)
 
     n_iter = 1
     while n_res > tol && n_iter <= max_niter
         # Solve: Jx = -res
         # res is modifyed by J, so we create a copy `-res`
         # TODO: provide a temporary storage for `-res`
-        solve!(solver, J, -res; rtol=η)
+        solve!(solver, J, -res; rtol=η, verbose=verbose-1)
 
-        verbose && @show solver.stats
         d = solver.x # Newton direction
         s = 1        # Newton step TODO: LineSearch
 
@@ -156,11 +144,15 @@ function newton_krylov!(F!, u, res;
         n_res_prior = n_res
         n_res = norm(res)
 
+        if isinf(n_res) || isnan(n_res)
+            error("Inner solver blew up at iter=$n_iter")
+        end
+
         if η_max !== nothing
             η = forcing(η, η_max, tol, n_res, n_res_prior)
         end
 
-        verbose && @info "Newton" iter=n_iter n_res η
+        verbose > 0 && @info "Newton" iter=n_iter n_res η
         n_iter += 1
     end
     u

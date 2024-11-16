@@ -1,6 +1,7 @@
 # 1D bratu equation
 
-using NewtonKrylov
+using NewtonKrylov, Krylov
+using SparseArrays, LinearAlgebra
 
 function bratu!(res, y, Δx, λ)
 	N = length(y)
@@ -33,17 +34,41 @@ const dx = 1 / (N + 1) # Grid-spacing
 x  = LinRange(0.0+dx, 1.0 - dx, N)
 u₀ = sin.(x.* π)
 
+## Build the Jacobian once to inspect it
+function assemble_jacobian(JOp)
+	v = zeros(eltype(JOp), size(JOp)[2])
+	out = zeros(eltype(JOp), size(JOp)[1])
+    J = SparseMatrixCSC{eltype(v), Int}(undef, size(JOp)...)
+    for i in 1:N
+        out .= 0.0
+        v .= 0.0
+        v[i] = 1.0
+        mul!(out, JOp, v)
+        for j in 1:N
+            if out[j] != 0
+                J[i, j] = out[j] # TODO: Check i,j
+            end
+        end
+    end
+    J
+end
+
+JOp = NewtonKrylov.JacobianOperator((res, u) -> bratu!(res, u, dx, λ), similar(u₀), copy(u₀))
+J = assemble_jacobian(JOp)
+J2 = assemble_jacobian(adjoint(JOp))
+J == J2 # since J is symmetric
+
 reference = true_sol_bratu.(x)
 uₖ_1 = newton_krylov!(
 	(res, u) -> bratu!(res, u, dx, λ),
 	copy(u₀), similar(u₀);
-	verbose = true
+	verbose = 1
 )
 
 uₖ_2 = newton_krylov(
 	(u) -> bratu(u, dx, λ),
 	copy(u₀);
-	verbose = true
+	verbose = 1
 )
 
 ϵ1 = abs2.(uₖ_1 .- reference)
@@ -54,22 +79,21 @@ uₖ_2 = newton_krylov(
 # 	(res, u) -> bratu!(res, u, dx, λ),
 # 	copy(u₀), similar(u₀);
 # 	verbose = true,
-# 	solver = :gmres
+# 	Solver = GmresSolver
 # )
 
 # Explodes..
-# newton_krylov!(
-# 	(res, u) -> bratu!(res, u, dx, λ),
-# 	copy(u₀), similar(u₀);
-# 	verbose = true,
-# 	solver = :cgne
-# 	η_max = nothing
-# )
+newton_krylov!(
+	(res, u) -> bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	verbose = 1,
+	Solver = CglsSolver, # CgneSolver
+)
 
-# newton_krylov!(
-# 	(res, u) -> bratu!(res, u, dx, λ),
-# 	copy(u₀), similar(u₀);
-# 	verbose = true,
-# 	solver = :bicgstab,
-# 	η_max = nothing
-# )
+newton_krylov!(
+	(res, u) -> bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	verbose = 1,
+	Solver = BicgstabSolver,
+	η_max = nothing
+)
