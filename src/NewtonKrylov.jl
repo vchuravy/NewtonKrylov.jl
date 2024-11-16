@@ -1,54 +1,98 @@
 module NewtonKrylov
 
-export JacobianOperator, JacobianOperatorInPlace, newton_krylov!, solution, residual
+export newton_krylov, newton_krylov!
 
 using Krylov
 using LinearAlgebra
 using Enzyme
 
-"""
-    AbstractJacobianOperator{N,M,T}
-"""
-abstract type AbstractJacobianOperator{N, M, T} end
-Base.size(::AbstractJacobianOperator{N,M}) where {N,M} = (N,M)
-Base.eltype(::AbstractJacobianOperator{N,M,T}) where {N,M,T} = T
+##
+# JacobianOperator
+## 
+import LinearAlgebra: mul!
 
-function residual end
-function update! end
-function solution end
+function maybe_duplicated(f,df)
+    if Enzyme.Compiler.active_reg(typeof(f))
+        return DuplicatedNoNeed(f,df)
+    else
+        return Const(f)
+    end
+end
 
-# LinearAlgebra.mul!(out, J, v)
+struct JacobianOperator{F, A}
+    f::F # F!(res, u)
+    f_cache::F
+    res::A
+    u::A
+    function JacobianOperator(f::F, res, u) where F
+        f_cache = Enzyme.make_zero(f)
+        new{F, typeof(u)}(f, f_cache, res, u)
+    end
+end
+
+Base.size(J::JacobianOperator) = (length(J.res), length(J.u))
+Base.eltype(J::JacobianOperator) = eltype(J.u)
+
+function mul!(out, J::JacobianOperator, v)
+    Enzyme.make_zero!(J.f_cache)
+    autodiff(Forward, 
+        maybe_duplicated(J.f, J.f_cache), Const, 
+        DuplicatedNoNeed(J.res, out), DuplicatedNoNeed(J.u, v)
+    )
+    nothing
+end
+
+function newton_krylov(F, u₀, M::Int = length(u₀); kwargs...)
+    F!(res, u) = (res .= F(u); nothing)
+    newton_krylov!(F!, u₀, M; kwargs...)
+end
+
+function newton_krylov!(F!, u₀, M::Int = length(u₀); kwargs...)
+    res = similar(u₀, M)
+    newton_krylov!(F!, u₀, res; kwargs...)
+end
+
 # TODO: LinearAlgebra.mul!(out, transpose(J), v)
 
-include("jacobian_operators.jl")
+##
+# Newton-Krylov
+##
 
 """
 """
-function newton_krylov!(J::AbstractJacobianOperator{N,M};
+function newton_krylov!(F!, u, res;
                         tol_rel=1e-6,
                         tol_abs=1e-12,
-                        max_niter = 50) where {N,M}
-	solver = CgSolver(N, M, typeof(solution(J)))
+                        max_niter = 50,
+                        verbose = false)
+    J = JacobianOperator(F!, res, u)
+    solver = CgSolver(size(J)..., typeof(u))
 
-    res₀ = residual(J)
-    n_res₀ = norm(res₀)
-    tol = tol_rel * n_res₀ + tol_abs
+    F!(res, u) # res = F(u)
+    n_res = norm(res)
+    tol = tol_rel * n_res + tol_abs
 
-    res = res₀
-    n_res = n_res₀
 
-    @info "Jacobian-Free Newton-Krylov" n_res₀ tol tol_rel tol_abs
-    n_iter = 0
+    verbose && @info "Jacobian-Free Newton-Krylov" n_res tol tol_rel tol_abs
+    n_iter = 1
 	while n_res > tol && n_iter <= max_niter
-		solve!(solver, J, -res) # Jx = -res
-        update!(J, solver.x)
-       
-		res = residual(J)
+        # Solve: Jx = -res
+		solve!(solver, J, -res)
+
+        d = solver.x # Newton direction
+        s = 1        # Newton step
+
+        # Update u
+        u .+= s .* d
+
+        # Update residual and norm
+        F!(res, u) # res = F(u)
         n_res = norm(res)
+
+        verbose && @info "Newton" iter=n_iter n_res tol
         n_iter += 1
-        @info "Newton" iter=n_iter n_res
 	end
-	return solution(J)
+    u
 end
 
 # TODO:

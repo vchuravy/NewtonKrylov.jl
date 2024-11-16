@@ -33,25 +33,18 @@ const dx = 1 / (N + 1) # Grid-spacing
 x  = LinRange(0.0+dx, 1.0 - dx, N)
 u₀ = sin.(x.* π)
 
-J! = JacobianOperatorInPlace{N}(
-	(res, u) -> bratu!(res, u, dx, λ),
-	copy(u₀)
-)
-
-J = JacobianOperator{N}(
-	(u) -> bratu(u, dx, λ),
-	copy(u₀)
-)
-
-size(J!)
-eltype(J!)
 reference = true_sol_bratu.(x)
-solution  = newton_krylov!(J!)
-J!.u .= u₀
-@time newton_krylov!(J!)
-ϵ = abs2.(solution .- reference)
+uₖ_1 = newton_krylov!(
+	(res, u) -> bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	verbose = true
+)
 
-solution  = newton_krylov!(J)
-J.u .= u₀
-@time newton_krylov!(J)
-ϵ2 = abs2.(solution .- reference)
+uₖ_2 = newton_krylov(
+	(u) -> bratu(u, dx, λ),
+	copy(u₀);
+	verbose = true
+)
+
+ϵ1 = abs2.(uₖ_1 .- reference)
+ϵ2 = abs2.(uₖ_1 .- reference)
