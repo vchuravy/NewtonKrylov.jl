@@ -35,12 +35,34 @@ Base.eltype(J::JacobianOperator) = eltype(J.u)
 
 function mul!(out, J::JacobianOperator, v)
     Enzyme.make_zero!(J.f_cache)
-    autodiff(Forward, 
-        maybe_duplicated(J.f, J.f_cache), Const, 
+    autodiff(Forward,
+        maybe_duplicated(J.f, J.f_cache), Const,
         DuplicatedNoNeed(J.res, out), DuplicatedNoNeed(J.u, v)
     )
     nothing
 end
+
+LinearAlgebra.adjoint(J::JacobianOperator) = Adjoint(J)
+LinearAlgebra.transpose(J::JacobianOperator) = Transpose(J)
+
+# Jᵀ(y, u) = ForwardDiff.gradient!(y, x -> dot(F(x), u), xk)
+# or just reverse mode
+
+function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}}, v)
+    J = parent(J′)
+    Enzyme.make_zero!(J.f_cache)
+    # TODO: provide cache for `copy(v)`
+    # Enzyme zeros input derivatives and that confuses the solvers.
+    autodiff(Reverse,
+        maybe_duplicated(J.f, J.f_cache), Const,
+        DuplicatedNoNeed(J.res, copy(v)), DuplicatedNoNeed(J.u, out)
+    )
+    nothing
+end
+
+##
+# Newton-Krylov
+##
 
 function newton_krylov(F, u₀, M::Int = length(u₀); kwargs...)
     F!(res, u) = (res .= F(u); nothing)
@@ -51,12 +73,6 @@ function newton_krylov!(F!, u₀, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
     newton_krylov!(F!, u₀, res; kwargs...)
 end
-
-# TODO: LinearAlgebra.mul!(out, transpose(J), v)
-
-##
-# Newton-Krylov
-##
 
 """
 forcing(η, η_max, tol, n_res, n_res_prior)
@@ -75,29 +91,58 @@ function forcing(η, η_max, tol, n_res, n_res_prior, γ=0.9)
 end
 
 """
+
+## Arguments
+  - `F!`: `F!(res, u)` solves `res = F(u) = 0`
+  - `u`: Initial guess
+  - `res`: Temporary for residual
+## Keyword Arguments
+  - `tol_rel`: Relative tolerance
+  - `tol_abs`: Absolute tolerance
+  - `max_niter`: Maximum number of iterations
+  - `η_max`: Maximum forcing term for inexact Newton.
+             If `nothing` an exact Newton method is used.   
 """
 function newton_krylov!(F!, u, res;
                         tol_rel=1e-6,
                         tol_abs=1e-12,
                         max_niter = 50,
-                        η_max = 0.9999,
-                        verbose = false)
-    J = JacobianOperator(F!, res, u)
-    solver = CgSolver(size(J)..., typeof(u))
-
+                        η_max::Union{Real,Nothing} = 0.9999,
+                        verbose = false,
+                        solver = :cg)
     F!(res, u) # res = F(u)
     n_res = norm(res)
     tol = tol_rel * n_res + tol_abs
 
-    @assert 0.0 < η_max < 1.0
-    η = η_max
+    @assert η_max === nothing || 0.0 < η_max < 1.0 
+    if η_max === nothing
+        η = √eps(eltype(u))
+    else
+        η = η_max
+    end
 
-    verbose && @info "Jacobian-Free Newton-Krylov" n_res tol tol_rel tol_abs η
+    verbose && @info "Jacobian-Free Newton-Krylov" solver res₀=n_res tol tol_rel tol_abs η 
+    
+    J = JacobianOperator(F!, res, u)
+    solver = if solver == :cg
+        CgSolver(size(J)..., typeof(u))
+    elseif solver == :cgne
+        # CgneSolver currently explodes
+        CgneSolver(size(J)..., typeof(u))
+    elseif solver == :gmres
+        GmresSolver(size(J)..., #=memory=# 20, typeof(u))
+    elseif solver == :bicgstab
+        BicgstabSolver(size(J)..., typeof(u))
+    else
+        throw(ArgumentError("Unknown solver: $solver"))
+    end
+
     n_iter = 1
-	while n_res > tol && n_iter <= max_niter
+    while n_res > tol && n_iter <= max_niter
         # Solve: Jx = -res
-        # res is modifyed by J
-		solve!(solver, J, -res; rtol=η)
+        # res is modifyed by J, so we create a copy `-res`
+        # TODO: provide a temporary storage for `-res`
+        solve!(solver, J, -res; rtol=η)
 
         verbose && @show solver.stats
         d = solver.x # Newton direction
@@ -111,11 +156,13 @@ function newton_krylov!(F!, u, res;
         n_res_prior = n_res
         n_res = norm(res)
 
-        η = forcing(η, η_max, tol, n_res, n_res_prior)
+        if η_max !== nothing
+            η = forcing(η, η_max, tol, n_res, n_res_prior)
+        end
 
         verbose && @info "Newton" iter=n_iter n_res η
         n_iter += 1
-	end
+    end
     u
 end
 

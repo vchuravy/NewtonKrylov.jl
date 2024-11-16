@@ -48,3 +48,28 @@ uₖ_2 = newton_krylov(
 
 ϵ1 = abs2.(uₖ_1 .- reference)
 ϵ2 = abs2.(uₖ_1 .- reference)
+
+# Very slow?
+# newton_krylov!(
+# 	(res, u) -> bratu!(res, u, dx, λ),
+# 	copy(u₀), similar(u₀);
+# 	verbose = true,
+# 	solver = :gmres
+# )
+
+# Explodes..
+# newton_krylov!(
+# 	(res, u) -> bratu!(res, u, dx, λ),
+# 	copy(u₀), similar(u₀);
+# 	verbose = true,
+# 	solver = :cgne
+# 	η_max = nothing
+# )
+
+# newton_krylov!(
+# 	(res, u) -> bratu!(res, u, dx, λ),
+# 	copy(u₀), similar(u₀);
+# 	verbose = true,
+# 	solver = :bicgstab,
+# 	η_max = nothing
+# )
