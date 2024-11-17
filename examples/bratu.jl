@@ -1,6 +1,7 @@
 # 1D bratu equation
 
-using NewtonKrylov, Krylov, KrylovPreconditioners
+using NewtonKrylov, Krylov
+using KrylovPreconditioners
 using SparseArrays, LinearAlgebra
 
 function bratu!(res, y, Δx, λ)
@@ -52,6 +53,24 @@ uₖ_2 = newton_krylov(
 ϵ2 = abs2.(uₖ_1 .- reference)
 
 ##
+# Solving with a fixed forcing
+newton_krylov!(
+	(res, u) -> bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	Solver = CgSolver,
+	forcing = NewtonKrylov.Fixed()
+)
+
+##
+# Solving with no forcing
+newton_krylov!(
+	(res, u) -> bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	Solver = CgSolver,
+	forcing = nothing
+)
+
+##
 # Solve using GMRES -- very slow
 # @time newton_krylov!(
 # 	(res, u) -> bratu!(res, u, dx, λ),
@@ -95,7 +114,7 @@ end
 	(res, u) -> bratu!(res, u, dx, λ),
 	copy(u₀), similar(u₀);
 	Solver = FgmresSolver,
-	N = (J) -> GmresPreconditioner(J, 30), # Assembles the full Jacobian
+	N = (J) -> GmresPreconditioner(J, 30),
 )
 
 # # Explodes..

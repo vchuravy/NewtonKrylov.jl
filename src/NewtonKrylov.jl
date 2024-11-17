@@ -82,6 +82,39 @@ end
 ##
 # Newton-Krylov
 ##
+import Base:@kwdef 
+
+abstract type Forcing end
+@kwdef struct Fixed <: Forcing
+    η::Float64=0.1
+end
+
+function (F::Fixed)(args...)
+    return F.η
+end
+inital(F::Fixed) = F.η
+
+@kwdef struct EisenstatWalker <:Forcing
+    η_max::Float64=0.999
+    γ::Float64=0.9
+end
+
+# @assert η_max === nothing || 0.0 < η_max < 1.0 
+
+"""
+Compute the Eisenstat-Walker forcing term for n > 0
+"""
+function (F::EisenstatWalker)(η, tol, n_res, n_res_prior)
+    η_res = F.γ * n_res^2 / n_res_prior^2
+    # Eq 3.6
+    if F.γ * η^2 <= 1//10
+        η_safe = min(F.η_max, η_res)
+    else
+        η_safe = min(F.η_max, max(η_res, F.γ*η^2))
+    end
+    return min(F.η_max, max(η_safe, 1//2 * tol / n_res)) # Eq 3.5
+end
+inital(F::EisenstatWalker) = F.η_max
 
 function newton_krylov(F, u₀, M::Int = length(u₀); kwargs...)
     F!(res, u) = (res .= F(u); nothing)
@@ -94,22 +127,6 @@ function newton_krylov!(F!, u₀, M::Int = length(u₀); kwargs...)
 end
 
 """
-forcing(η, η_max, tol, n_res, n_res_prior)
-
-Compute the Eisenstat-Walker forcing term for n > 0
-"""
-function forcing(η, η_max, tol, n_res, n_res_prior, γ=0.9)
-    η_res = γ * n_res^2 / n_res_prior^2
-    # Eq 3.6
-    if γ * η^2 <= 1//10
-        η_safe = min(η_max, η_res)
-    else
-        η_safe = min(η_max, max(η_res, γ*η^2))
-    end
-    return min(η_max, max(η_safe, 1//2 * tol / n_res)) # Eq 3.5
-end
-
-"""
 
 ## Arguments
   - `F!`: `F!(res, u)` solves `res = F(u) = 0`
@@ -119,14 +136,14 @@ end
   - `tol_rel`: Relative tolerance
   - `tol_abs`: Absolute tolerance
   - `max_niter`: Maximum number of iterations
-  - `η_max`: Maximum forcing term for inexact Newton.
+  - `forcing`: Maximum forcing term for inexact Newton.
              If `nothing` an exact Newton method is used.   
 """
 function newton_krylov!(F!, u, res;
                         tol_rel=1e-6,
                         tol_abs=1e-12,
                         max_niter = 50,
-                        η_max::Union{Real,Nothing} = 0.9999,
+                        forcing::Union{Forcing,Nothing} = EisenstatWalker(),
                         verbose = 0,
                         Solver = CgSolver,
                         M = nothing,
@@ -136,11 +153,8 @@ function newton_krylov!(F!, u, res;
     n_res = norm(res)
     tol = tol_rel * n_res + tol_abs
 
-    @assert η_max === nothing || 0.0 < η_max < 1.0 
-    if η_max === nothing
-        η = √eps(eltype(u))
-    else
-        η = η_max
+    if forcing !== nothing
+        η = inital(forcing)
     end
 
     verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀=n_res tol tol_rel tol_abs η 
@@ -151,19 +165,22 @@ function newton_krylov!(F!, u, res;
     n_iter = 1
     while n_res > tol && n_iter <= max_niter
         # Handle kwargs for Preconditoners
-        kwargs = (; ldiv,)
+        kwargs = (; ldiv, verbose=verbose-1)
         if N !== nothing
             kwargs = (; N = N(J), kwargs...)
         end
         if M !== nothing
             kwargs = (; M = M(J), kwargs...)
         end
+        if forcing !== nothing
+            # ‖F′(u)d + F(u)‖ <= η * ‖F(u)‖ Inexact Newton termination
+            kwargs = (;rtol=η, kwargs...)
+        end
 
         # Solve: Jx = -res
         # res is modifyed by J, so we create a copy `-res`
         # TODO: provide a temporary storage for `-res`
-        # ‖F′(u)d + F(u)‖ <= η * ‖F(u)‖ Inexact Newton termination
-        solve!(solver, J, -res; rtol=η, verbose=verbose-1, kwargs...)
+        solve!(solver, J, -res; kwargs...)
 
         d = solver.x # Newton direction
         s = 1        # Newton step TODO: LineSearch
@@ -180,8 +197,8 @@ function newton_krylov!(F!, u, res;
             error("Inner solver blew up at iter=$n_iter")
         end
 
-        if η_max !== nothing
-            η = forcing(η, η_max, tol, n_res, n_res_prior)
+        if forcing !== nothing
+            η = forcing(η, tol, n_res, n_res_prior)
         end
 
         verbose > 0 && @info "Newton" iter=n_iter n_res η
