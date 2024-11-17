@@ -1,6 +1,6 @@
 # 1D bratu equation
 
-using NewtonKrylov, Krylov
+using NewtonKrylov, Krylov, KrylovPreconditioners
 using SparseArrays, LinearAlgebra
 
 function bratu!(res, y, Δx, λ)
@@ -34,66 +34,82 @@ const dx = 1 / (N + 1) # Grid-spacing
 x  = LinRange(0.0+dx, 1.0 - dx, N)
 u₀ = sin.(x.* π)
 
-## Build the Jacobian once to inspect it
-function assemble_jacobian(JOp)
-	v = zeros(eltype(JOp), size(JOp)[2])
-	out = zeros(eltype(JOp), size(JOp)[1])
-    J = SparseMatrixCSC{eltype(v), Int}(undef, size(JOp)...)
-    for i in 1:N
-        out .= 0.0
-        v .= 0.0
-        v[i] = 1.0
-        mul!(out, JOp, v)
-        for j in 1:N
-            if out[j] != 0
-                J[i, j] = out[j] # TODO: Check i,j
-            end
-        end
-    end
-    J
-end
-
-JOp = NewtonKrylov.JacobianOperator((res, u) -> bratu!(res, u, dx, λ), similar(u₀), copy(u₀))
-J = assemble_jacobian(JOp)
-J2 = assemble_jacobian(adjoint(JOp))
-J == J2 # since J is symmetric
-
 reference = true_sol_bratu.(x)
+
 uₖ_1 = newton_krylov!(
 	(res, u) -> bratu!(res, u, dx, λ),
 	copy(u₀), similar(u₀);
-	verbose = 1
+	Solver = CgSolver,
 )
 
 uₖ_2 = newton_krylov(
 	(u) -> bratu(u, dx, λ),
 	copy(u₀);
-	verbose = 1
+	Solver = CgSolver
 )
 
 ϵ1 = abs2.(uₖ_1 .- reference)
 ϵ2 = abs2.(uₖ_1 .- reference)
 
-# Very slow?
+##
+# Solve using GMRES -- very slow
+# @time newton_krylov!(
+# 	(res, u) -> bratu!(res, u, dx, λ),
+# 	copy(u₀), similar(u₀);
+# 	Solver = GmresSolver,
+# )
+
+##
+# Solve using GMRES + ILU Preconditoner
+@time newton_krylov!(
+	(res, u) -> bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	Solver = GmresSolver,
+	N = (J) -> ilu(collect(J)), # Assembles the full Jacobian
+	ldiv = true,
+)
+
+##
+# Solve using FGMRES + ILU Preconditoner
+@time newton_krylov!(
+	(res, u) -> bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	Solver = FgmresSolver,
+	N = (J) -> ilu(collect(J)), # Assembles the full Jacobian
+	ldiv = true,
+)
+
+##
+# Solve using FGMRES + GMRES Preconditoner
+struct GmresPreconditioner{JOp}
+	J::JOp
+	itmax::Int
+end
+
+function LinearAlgebra.mul!(y, P::GmresPreconditioner, x)
+  sol, _ = gmres(P.J, x; P.itmax)
+  copyto!(y, sol)
+end
+
+@time newton_krylov!(
+	(res, u) -> bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	Solver = FgmresSolver,
+	N = (J) -> GmresPreconditioner(J, 30), # Assembles the full Jacobian
+)
+
+# # Explodes..
 # newton_krylov!(
 # 	(res, u) -> bratu!(res, u, dx, λ),
 # 	copy(u₀), similar(u₀);
-# 	verbose = true,
-# 	Solver = GmresSolver
+# 	verbose = 1,
+# 	Solver = CglsSolver, # CgneSolver
 # )
 
-# Explodes..
-newton_krylov!(
-	(res, u) -> bratu!(res, u, dx, λ),
-	copy(u₀), similar(u₀);
-	verbose = 1,
-	Solver = CglsSolver, # CgneSolver
-)
-
-newton_krylov!(
-	(res, u) -> bratu!(res, u, dx, λ),
-	copy(u₀), similar(u₀);
-	verbose = 1,
-	Solver = BicgstabSolver,
-	η_max = nothing
-)
+# newton_krylov!(
+# 	(res, u) -> bratu!(res, u, dx, λ),
+# 	copy(u₀), similar(u₀);
+# 	verbose = 1,
+# 	Solver = BicgstabSolver,
+# 	η_max = nothing
+# )

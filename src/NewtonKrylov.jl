@@ -3,7 +3,7 @@ module NewtonKrylov
 export newton_krylov, newton_krylov!
 
 using Krylov
-using LinearAlgebra
+using LinearAlgebra, SparseArrays
 using Enzyme
 
 ##
@@ -60,6 +60,25 @@ function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:A
     nothing
 end
 
+function Base.collect(JOp::JacobianOperator)
+    N,M = size(JOp)
+	v = zeros(eltype(JOp), M)
+	out = zeros(eltype(JOp), N)
+    J = SparseMatrixCSC{eltype(v), Int}(undef, size(JOp)...)
+    for j in 1:M
+        out .= 0.0
+        v .= 0.0
+        v[j] = 1.0
+        mul!(out, JOp, v)
+        for i in 1:N
+            if out[i] != 0
+                J[i, j] = out[i]
+            end
+        end
+    end
+    J
+end
+
 ##
 # Newton-Krylov
 ##
@@ -109,7 +128,10 @@ function newton_krylov!(F!, u, res;
                         max_niter = 50,
                         η_max::Union{Real,Nothing} = 0.9999,
                         verbose = 0,
-                        Solver = CgSolver)
+                        Solver = CgSolver,
+                        M = nothing,
+                        N = nothing,
+                        ldiv = false)
     F!(res, u) # res = F(u)
     n_res = norm(res)
     tol = tol_rel * n_res + tol_abs
@@ -128,10 +150,20 @@ function newton_krylov!(F!, u, res;
 
     n_iter = 1
     while n_res > tol && n_iter <= max_niter
+        # Handle kwargs for Preconditoners
+        kwargs = (; ldiv,)
+        if N !== nothing
+            kwargs = (; N = N(J), kwargs...)
+        end
+        if M !== nothing
+            kwargs = (; M = M(J), kwargs...)
+        end
+
         # Solve: Jx = -res
         # res is modifyed by J, so we create a copy `-res`
         # TODO: provide a temporary storage for `-res`
-        solve!(solver, J, -res; rtol=η, verbose=verbose-1)
+        # ‖F′(u)d + F(u)‖ <= η * ‖F(u)‖ Inexact Newton termination
+        solve!(solver, J, -res; rtol=η, verbose=verbose-1, kwargs...)
 
         d = solver.x # Newton direction
         s = 1        # Newton step TODO: LineSearch
@@ -162,8 +194,5 @@ end
 # - Better statistic
 # - Allow choice of Krylov solver
 #   - maxit_krylov?
-# - Preconditoners
-#  - See 3.3
-
 
 end # module NewtonKrylov
