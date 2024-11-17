@@ -1,8 +1,9 @@
-# 1D bratu equation
+# # 1D bratu equation
 
 using NewtonKrylov, Krylov
 using KrylovPreconditioners
 using SparseArrays, LinearAlgebra
+using CairoMakie
 
 function bratu!(res, y, Δx, λ)
     N = length(y)
@@ -23,7 +24,7 @@ function bratu(y, dx, λ)
 end
 
 function true_sol_bratu(x)
-    # for λ = 3.51382, 2nd sol θ = 4.8057
+    ## for λ = 3.51382, 2nd sol θ = 4.8057
     θ = 4.79173
     return -2 * log(cosh(θ * (x - 0.5) / 2) / (cosh(θ / 4)))
 end
@@ -52,8 +53,7 @@ uₖ_2 = newton_krylov(
 ϵ1 = abs2.(uₖ_1 .- reference)
 ϵ2 = abs2.(uₖ_1 .- reference)
 
-##
-# Solving with a fixed forcing
+# ## Solving with a fixed forcing
 newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
@@ -61,8 +61,7 @@ newton_krylov!(
     forcing = NewtonKrylov.Fixed()
 )
 
-##
-# Solving with no forcing
+# ## Solving with no forcing
 newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
@@ -70,16 +69,16 @@ newton_krylov!(
     forcing = nothing
 )
 
-##
-# Solve using GMRES -- very slow
+# ## Solve using GMRES -- very slow
+# ```julia
 # @time newton_krylov!(
 # 	(res, u) -> bratu!(res, u, dx, λ),
 # 	copy(u₀), similar(u₀);
 # 	Solver = GmresSolver,
 # )
+# ```
 
-##
-# Solve using GMRES + ILU Preconditoner
+# ## Solve using GMRES + ILU Preconditoner
 @time newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
@@ -88,8 +87,7 @@ newton_krylov!(
     ldiv = true,
 )
 
-##
-# Solve using FGMRES + ILU Preconditoner
+# ## Solve using FGMRES + ILU Preconditoner
 @time newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
@@ -98,8 +96,7 @@ newton_krylov!(
     ldiv = true,
 )
 
-##
-# Solve using FGMRES + GMRES Preconditoner
+# ## Solve using FGMRES + GMRES Preconditoner
 struct GmresPreconditioner{JOp}
     J::JOp
     itmax::Int
@@ -117,14 +114,17 @@ end
     N = (J) -> GmresPreconditioner(J, 30),
 )
 
-# # Explodes..
+# ## Explodes..
+# ```julia
 # newton_krylov!(
 # 	(res, u) -> bratu!(res, u, dx, λ),
 # 	copy(u₀), similar(u₀);
 # 	verbose = 1,
 # 	Solver = CglsSolver, # CgneSolver
 # )
-
+# ```
+#
+# ```julia
 # newton_krylov!(
 # 	(res, u) -> bratu!(res, u, dx, λ),
 # 	copy(u₀), similar(u₀);
@@ -132,3 +132,4 @@ end
 # 	Solver = BicgstabSolver,
 # 	η_max = nothing
 # )
+# ```
