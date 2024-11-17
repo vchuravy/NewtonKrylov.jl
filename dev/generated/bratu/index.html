@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Bratu 1D · NewtonKrylov.jl</title><meta name="title" content="Bratu 1D · NewtonKrylov.jl"/><meta property="og:title" content="Bratu 1D · NewtonKrylov.jl"/><meta property="twitter:title" content="Bratu 1D · NewtonKrylov.jl"/><meta name="description" content="Documentation for NewtonKrylov.jl."/><meta property="og:description" content="Documentation for NewtonKrylov.jl."/><meta property="twitter:description" content="Documentation for NewtonKrylov.jl."/><meta property="og:url" content="https://vchuravy.dev/NewtonKrylov.jl/generated/bratu/"/><meta property="twitter:url" content="https://vchuravy.dev/NewtonKrylov.jl/generated/bratu/"/><link rel="canonical" href="https://vchuravy.dev/NewtonKrylov.jl/generated/bratu/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><script src="https://plausible.io/js/plausible.js" data-domain="vchuravy.dev" defer></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">NewtonKrylov.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Bratu 1D</a><ul class="internal"><li><a class="tocitem" href="#Solving-with-a-fixed-forcing"><span>Solving with a fixed forcing</span></a></li><li><a class="tocitem" href="#Solving-with-no-forcing"><span>Solving with no forcing</span></a></li><li><a class="tocitem" href="#Solve-using-GMRES-–-very-slow"><span>Solve using GMRES – very slow</span></a></li><li><a class="tocitem" href="#Solve-using-GMRES-ILU-Preconditoner"><span>Solve using GMRES + ILU Preconditoner</span></a></li><li><a class="tocitem" href="#Solve-using-FGMRES-ILU-Preconditoner"><span>Solve using FGMRES + ILU Preconditoner</span></a></li><li><a class="tocitem" href="#Solve-using-FGMRES-GMRES-Preconditoner"><span>Solve using FGMRES + GMRES Preconditoner</span></a></li><li><a class="tocitem" href="#Explodes.."><span>Explodes..</span></a></li></ul></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Bratu 1D</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Bratu 1D</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/vchuravy/NewtonKrylov.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/vchuravy/NewtonKrylov.jl/blob/main/examples/bratu.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="1D-bratu-equation"><a class="docs-heading-anchor" href="#1D-bratu-equation">1D bratu equation</a><a id="1D-bratu-equation-1"></a><a class="docs-heading-anchor-permalink" href="#1D-bratu-equation" title="Permalink"></a></h1><pre><code class="language-julia hljs">using NewtonKrylov, Krylov
+using KrylovPreconditioners
+using SparseArrays, LinearAlgebra
+using CairoMakie
+
+function bratu!(res, y, Δx, λ)
+    N = length(y)
+    for i in 1:N
+        y_l = i == 1 ? zero(eltype(y)) : y[i - 1]
+        y_r = i == N ? zero(eltype(y)) : y[i + 1]
+        y′′ = (y_r - 2y[i] + y_l) / Δx^2
+
+        res[i] = y′′ + λ * exp(y[i]) # = 0
+    end
+    return nothing
+end
+
+function bratu(y, dx, λ)
+    res = similar(y)
+    bratu!(res, y, dx, λ)
+    return res
+end
+
+function true_sol_bratu(x)
+    # for λ = 3.51382, 2nd sol θ = 4.8057
+    θ = 4.79173
+    return -2 * log(cosh(θ * (x - 0.5) / 2) / (cosh(θ / 4)))
+end
+
+const N = 10_000
+const λ = 3.51382
+const dx = 1 / (N + 1) # Grid-spacing
+
+x = LinRange(0.0 + dx, 1.0 - dx, N)
+u₀ = sin.(x .* π)
+
+reference = true_sol_bratu.(x)
+
+uₖ_1 = newton_krylov!(
+    (res, u) -&gt; bratu!(res, u, dx, λ),
+    copy(u₀), similar(u₀);
+    Solver = CgSolver,
+)
+
+uₖ_2 = newton_krylov(
+    (u) -&gt; bratu(u, dx, λ),
+    copy(u₀);
+    Solver = CgSolver
+)
+
+ϵ1 = abs2.(uₖ_1 .- reference)
+ϵ2 = abs2.(uₖ_1 .- reference)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element Vector{Float64}:
+ 1.836933609086852e-19
+ 7.347543887717099e-19
+ 1.6531880216337836e-18
+ 2.9389777335001664e-18
+ 4.592155329123749e-18
+ 6.612746392212082e-18
+ 9.000802736100384e-18
+ 1.1756279381039391e-17
+ 1.4879170888144122e-17
+ 1.836954256507948e-17
+ ⋮
+ 1.491754267863176e-17
+ 1.1786643778047834e-17
+ 9.024092296852004e-18
+ 6.629882473062125e-18
+ 4.604105698219858e-18
+ 2.9466376142495955e-18
+ 1.6574983664078382e-18
+ 7.366726975799201e-19
+ 1.8417231148562448e-19</code></pre><h2 id="Solving-with-a-fixed-forcing"><a class="docs-heading-anchor" href="#Solving-with-a-fixed-forcing">Solving with a fixed forcing</a><a id="Solving-with-a-fixed-forcing-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-with-a-fixed-forcing" title="Permalink"></a></h2><pre><code class="language-julia hljs">newton_krylov!(
+    (res, u) -&gt; bratu!(res, u, dx, λ),
+    copy(u₀), similar(u₀);
+    Solver = CgSolver,
+    forcing = NewtonKrylov.Fixed()
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element Vector{Float64}:
+ 0.0003991050262005826
+ 0.0007981749071989387
+ 0.001197209628972456
+ 0.001596209177493351
+ 0.0019951735387218374
+ 0.002394102698612873
+ 0.002792996643123479
+ 0.003191855358201036
+ 0.0035906788297948747
+ 0.0039894670438384155
+ ⋮
+ 0.0035906788311656345
+ 0.0031918553594167277
+ 0.0027929966441863022
+ 0.0023941026995247614
+ 0.0019951735394817976
+ 0.0015962091781037214
+ 0.0011972096294331038
+ 0.0007981749075051778
+ 0.00039910502635289715</code></pre><h2 id="Solving-with-no-forcing"><a class="docs-heading-anchor" href="#Solving-with-no-forcing">Solving with no forcing</a><a id="Solving-with-no-forcing-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-with-no-forcing" title="Permalink"></a></h2><pre><code class="language-julia hljs">newton_krylov!(
+    (res, u) -&gt; bratu!(res, u, dx, λ),
+    copy(u₀), similar(u₀);
+    Solver = CgSolver,
+    forcing = nothing
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element Vector{Float64}:
+ 0.00039910502625887465
+ 0.0007981749073205086
+ 0.001197209629156715
+ 0.0015962091777349432
+ 0.001995173539018275
+ 0.002394102698965435
+ 0.0027929966435307823
+ 0.0031918553586643113
+ 0.0035906788303116557
+ 0.00398946704441408
+ ⋮
+ 0.003590678830310906
+ 0.0031918553586636443
+ 0.0027929966435301964
+ 0.0023941026989649328
+ 0.0019951735390178575
+ 0.0015962091777346097
+ 0.0011972096291564683
+ 0.0007981749073203457
+ 0.00039910502625879345</code></pre><h2 id="Solve-using-GMRES-–-very-slow"><a class="docs-heading-anchor" href="#Solve-using-GMRES-–-very-slow">Solve using GMRES – very slow</a><a id="Solve-using-GMRES-–-very-slow-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-GMRES-–-very-slow" title="Permalink"></a></h2><pre><code class="language-julia hljs">@time newton_krylov!(
+	(res, u) -&gt; bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	Solver = GmresSolver,
+)</code></pre><h2 id="Solve-using-GMRES-ILU-Preconditoner"><a class="docs-heading-anchor" href="#Solve-using-GMRES-ILU-Preconditoner">Solve using GMRES + ILU Preconditoner</a><a id="Solve-using-GMRES-ILU-Preconditoner-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-GMRES-ILU-Preconditoner" title="Permalink"></a></h2><pre><code class="language-julia hljs">@time newton_krylov!(
+    (res, u) -&gt; bratu!(res, u, dx, λ),
+    copy(u₀), similar(u₀);
+    Solver = GmresSolver,
+    N = (J) -&gt; ilu(collect(J)), # Assembles the full Jacobian
+    ldiv = true,
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element Vector{Float64}:
+ 0.0003991050262560196
+ 0.000798174907314799
+ 0.0011972096291481497
+ 0.0015962091777235203
+ 0.0019951735390039966
+ 0.002394102698948301
+ 0.0027929966435107927
+ 0.003191855358641467
+ 0.0035906788302859562
+ 0.0039894670443855265
+ ⋮
+ 0.0035906788302852762
+ 0.003191855358640863
+ 0.002792996643510264
+ 0.0023941026989478475
+ 0.0019951735390036185
+ 0.001596209177723218
+ 0.0011972096291479229
+ 0.0007981749073146479
+ 0.00039910502625594406</code></pre><h2 id="Solve-using-FGMRES-ILU-Preconditoner"><a class="docs-heading-anchor" href="#Solve-using-FGMRES-ILU-Preconditoner">Solve using FGMRES + ILU Preconditoner</a><a id="Solve-using-FGMRES-ILU-Preconditoner-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-FGMRES-ILU-Preconditoner" title="Permalink"></a></h2><pre><code class="language-julia hljs">@time newton_krylov!(
+    (res, u) -&gt; bratu!(res, u, dx, λ),
+    copy(u₀), similar(u₀);
+    Solver = FgmresSolver,
+    N = (J) -&gt; ilu(collect(J)), # Assembles the full Jacobian
+    ldiv = true,
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element Vector{Float64}:
+ 0.000399105026248449
+ 0.0007981749072996578
+ 0.0011972096291254378
+ 0.0015962091776932379
+ 0.0019951735389661432
+ 0.0023941026989028774
+ 0.0027929966434577986
+ 0.0031918553585809023
+ 0.0035906788302178206
+ 0.00398946704430982
+ ⋮
+ 0.003590678830216532
+ 0.0031918553585797574
+ 0.0027929966434567964
+ 0.0023941026989020187
+ 0.0019951735389654277
+ 0.0015962091776926654
+ 0.0011972096291250085
+ 0.0007981749072993717
+ 0.00039910502624830596</code></pre><h2 id="Solve-using-FGMRES-GMRES-Preconditoner"><a class="docs-heading-anchor" href="#Solve-using-FGMRES-GMRES-Preconditoner">Solve using FGMRES + GMRES Preconditoner</a><a id="Solve-using-FGMRES-GMRES-Preconditoner-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-FGMRES-GMRES-Preconditoner" title="Permalink"></a></h2><pre><code class="language-julia hljs">struct GmresPreconditioner{JOp}
+    J::JOp
+    itmax::Int
+end
+
+function LinearAlgebra.mul!(y, P::GmresPreconditioner, x)
+    sol, _ = gmres(P.J, x; P.itmax)
+    return copyto!(y, sol)
+end
+
+@time newton_krylov!(
+    (res, u) -&gt; bratu!(res, u, dx, λ),
+    copy(u₀), similar(u₀);
+    Solver = FgmresSolver,
+    N = (J) -&gt; GmresPreconditioner(J, 30),
+)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10000-element Vector{Float64}:
+ 0.00039909721081166544
+ 0.0007981592764269495
+ 0.0011971861828176742
+ 0.0015961779159502218
+ 0.001995134461786945
+ 0.0023940558062878936
+ 0.0027929419354081305
+ 0.0031917928350988106
+ 0.003590608491306925
+ 0.003989388889971356
+ ⋮
+ 0.0035906084904819974
+ 0.003191792834359467
+ 0.00279294193475668
+ 0.002394055805726175
+ 0.0019951344613165934
+ 0.0015961779155722073
+ 0.0011971861825332518
+ 0.0007981592762368089
+ 0.00039909721071665615</code></pre><h2 id="Explodes.."><a class="docs-heading-anchor" href="#Explodes..">Explodes..</a><a id="Explodes..-1"></a><a class="docs-heading-anchor-permalink" href="#Explodes.." title="Permalink"></a></h2><pre><code class="language-julia hljs">newton_krylov!(
+	(res, u) -&gt; bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	verbose = 1,
+	Solver = CglsSolver, # CgneSolver
+)</code></pre><pre><code class="language-julia hljs">newton_krylov!(
+	(res, u) -&gt; bratu!(res, u, dx, λ),
+	copy(u₀), similar(u₀);
+	verbose = 1,
+	Solver = BicgstabSolver,
+	η_max = nothing
+)</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.0 on <span class="colophon-date" title="Sunday 17 November 2024 21:30">Sunday 17 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
