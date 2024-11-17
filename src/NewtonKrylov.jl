@@ -8,12 +8,12 @@ using Enzyme
 
 ##
 # JacobianOperator
-## 
+##
 import LinearAlgebra: mul!
 
-function maybe_duplicated(f,df)
+function maybe_duplicated(f, df)
     if Enzyme.Compiler.active_reg(typeof(f))
-        return DuplicatedNoNeed(f,df)
+        return DuplicatedNoNeed(f, df)
     else
         return Const(f)
     end
@@ -24,9 +24,9 @@ struct JacobianOperator{F, A}
     f_cache::F
     res::A
     u::A
-    function JacobianOperator(f::F, res, u) where F
+    function JacobianOperator(f::F, res, u) where {F}
         f_cache = Enzyme.make_zero(f)
-        new{F, typeof(u)}(f, f_cache, res, u)
+        return new{F, typeof(u)}(f, f_cache, res, u)
     end
 end
 
@@ -35,11 +35,12 @@ Base.eltype(J::JacobianOperator) = eltype(J.u)
 
 function mul!(out, J::JacobianOperator, v)
     Enzyme.make_zero!(J.f_cache)
-    autodiff(Forward,
+    autodiff(
+        Forward,
         maybe_duplicated(J.f, J.f_cache), Const,
         DuplicatedNoNeed(J.res, out), DuplicatedNoNeed(J.u, v)
     )
-    nothing
+    return nothing
 end
 
 LinearAlgebra.adjoint(J::JacobianOperator) = Adjoint(J)
@@ -53,17 +54,18 @@ function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:A
     Enzyme.make_zero!(J.f_cache)
     # TODO: provide cache for `copy(v)`
     # Enzyme zeros input derivatives and that confuses the solvers.
-    autodiff(Reverse,
+    autodiff(
+        Reverse,
         maybe_duplicated(J.f, J.f_cache), Const,
         DuplicatedNoNeed(J.res, copy(v)), DuplicatedNoNeed(J.u, out)
     )
-    nothing
+    return nothing
 end
 
 function Base.collect(JOp::JacobianOperator)
-    N,M = size(JOp)
-	v = zeros(eltype(JOp), M)
-	out = zeros(eltype(JOp), N)
+    N, M = size(JOp)
+    v = zeros(eltype(JOp), M)
+    out = zeros(eltype(JOp), N)
     J = SparseMatrixCSC{eltype(v), Int}(undef, size(JOp)...)
     for j in 1:M
         out .= 0.0
@@ -76,17 +78,17 @@ function Base.collect(JOp::JacobianOperator)
             end
         end
     end
-    J
+    return J
 end
 
 ##
 # Newton-Krylov
 ##
-import Base:@kwdef 
+import Base: @kwdef
 
 abstract type Forcing end
 @kwdef struct Fixed <: Forcing
-    η::Float64=0.1
+    η::Float64 = 0.1
 end
 
 function (F::Fixed)(args...)
@@ -94,12 +96,12 @@ function (F::Fixed)(args...)
 end
 inital(F::Fixed) = F.η
 
-@kwdef struct EisenstatWalker <:Forcing
-    η_max::Float64=0.999
-    γ::Float64=0.9
+@kwdef struct EisenstatWalker <: Forcing
+    η_max::Float64 = 0.999
+    γ::Float64 = 0.9
 end
 
-# @assert η_max === nothing || 0.0 < η_max < 1.0 
+# @assert η_max === nothing || 0.0 < η_max < 1.0
 
 """
 Compute the Eisenstat-Walker forcing term for n > 0
@@ -107,23 +109,23 @@ Compute the Eisenstat-Walker forcing term for n > 0
 function (F::EisenstatWalker)(η, tol, n_res, n_res_prior)
     η_res = F.γ * n_res^2 / n_res_prior^2
     # Eq 3.6
-    if F.γ * η^2 <= 1//10
+    if F.γ * η^2 <= 1 // 10
         η_safe = min(F.η_max, η_res)
     else
-        η_safe = min(F.η_max, max(η_res, F.γ*η^2))
+        η_safe = min(F.η_max, max(η_res, F.γ * η^2))
     end
-    return min(F.η_max, max(η_safe, 1//2 * tol / n_res)) # Eq 3.5
+    return min(F.η_max, max(η_safe, 1 // 2 * tol / n_res)) # Eq 3.5
 end
 inital(F::EisenstatWalker) = F.η_max
 
 function newton_krylov(F, u₀, M::Int = length(u₀); kwargs...)
     F!(res, u) = (res .= F(u); nothing)
-    newton_krylov!(F!, u₀, M; kwargs...)
+    return newton_krylov!(F!, u₀, M; kwargs...)
 end
 
 function newton_krylov!(F!, u₀, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
-    newton_krylov!(F!, u₀, res; kwargs...)
+    return newton_krylov!(F!, u₀, res; kwargs...)
 end
 
 """
@@ -139,16 +141,18 @@ end
   - `forcing`: Maximum forcing term for inexact Newton.
              If `nothing` an exact Newton method is used.   
 """
-function newton_krylov!(F!, u, res;
-                        tol_rel=1e-6,
-                        tol_abs=1e-12,
-                        max_niter = 50,
-                        forcing::Union{Forcing,Nothing} = EisenstatWalker(),
-                        verbose = 0,
-                        Solver = CgSolver,
-                        M = nothing,
-                        N = nothing,
-                        ldiv = false)
+function newton_krylov!(
+        F!, u, res;
+        tol_rel = 1.0e-6,
+        tol_abs = 1.0e-12,
+        max_niter = 50,
+        forcing::Union{Forcing, Nothing} = EisenstatWalker(),
+        verbose = 0,
+        Solver = CgSolver,
+        M = nothing,
+        N = nothing,
+        ldiv = false
+    )
     F!(res, u) # res = F(u)
     n_res = norm(res)
     tol = tol_rel * n_res + tol_abs
@@ -157,15 +161,15 @@ function newton_krylov!(F!, u, res;
         η = inital(forcing)
     end
 
-    verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀=n_res tol tol_rel tol_abs η 
-    
+    verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀ = n_res tol tol_rel tol_abs η
+
     J = JacobianOperator(F!, res, u)
     solver = Solver(J, res)
 
     n_iter = 1
     while n_res > tol && n_iter <= max_niter
         # Handle kwargs for Preconditoners
-        kwargs = (; ldiv, verbose=verbose-1)
+        kwargs = (; ldiv, verbose = verbose - 1)
         if N !== nothing
             kwargs = (; N = N(J), kwargs...)
         end
@@ -174,7 +178,7 @@ function newton_krylov!(F!, u, res;
         end
         if forcing !== nothing
             # ‖F′(u)d + F(u)‖ <= η * ‖F(u)‖ Inexact Newton termination
-            kwargs = (;rtol=η, kwargs...)
+            kwargs = (; rtol = η, kwargs...)
         end
 
         # Solve: Jx = -res
@@ -201,10 +205,10 @@ function newton_krylov!(F!, u, res;
             η = forcing(η, tol, n_res, n_res_prior)
         end
 
-        verbose > 0 && @info "Newton" iter=n_iter n_res η
+        verbose > 0 && @info "Newton" iter = n_iter n_res η
         n_iter += 1
     end
-    u
+    return u
 end
 
 # TODO:
