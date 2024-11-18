@@ -12,7 +12,7 @@ using Enzyme
 import LinearAlgebra: mul!
 
 function maybe_duplicated(f, df)
-    if Enzyme.Compiler.active_reg(typeof(f))
+    if !Enzyme.Compiler.guaranteed_const(typeof(f))
         return DuplicatedNoNeed(f, df)
     else
         return Const(f)
@@ -34,11 +34,13 @@ Base.size(J::JacobianOperator) = (length(J.res), length(J.u))
 Base.eltype(J::JacobianOperator) = eltype(J.u)
 
 function mul!(out, J::JacobianOperator, v)
-    Enzyme.make_zero!(J.f_cache)
+    # Enzyme.make_zero!(J.f_cache)
+    f_cache = Enzyme.make_zero(J.f) # Stop gap until we can zero out mutable values
     autodiff(
         Forward,
-        maybe_duplicated(J.f, J.f_cache), Const,
-        DuplicatedNoNeed(J.res, out), DuplicatedNoNeed(J.u, v)
+        maybe_duplicated(J.f, f_cache), Const,
+        DuplicatedNoNeed(J.res, reshape(out, size(J.res))),
+        DuplicatedNoNeed(J.u, reshape(v, size(J.u)))
     )
     return nothing
 end
@@ -57,7 +59,8 @@ function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:A
     autodiff(
         Reverse,
         maybe_duplicated(J.f, J.f_cache), Const,
-        DuplicatedNoNeed(J.res, copy(v)), DuplicatedNoNeed(J.u, out)
+        DuplicatedNoNeed(J.res, reshape(copy(v), size(J.res))),
+        DuplicatedNoNeed(J.u, reshape(out, size(J.u)))
     )
     return nothing
 end
