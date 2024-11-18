@@ -43,67 +43,97 @@ const dx = 1 / (N + 1) # Grid-spacing
 x = LinRange(0.0 + dx, 1.0 - dx, N)
 u₀ = sin.(x .* π)
 
+lines(x, u₀, label = "Inital guess")
+
 # ## Reference solution evaluated over domain
 reference = true_sol_bratu.(x)
 
-# ## Solving using inplace and out-of-place variants
-uₖ_1 = newton_krylov!(
+f, ax = lines(x, u₀, label = "Inital guess")
+lines!(ax, x, reference, label = "Reference solution")
+axislegend(ax, position = :cb)
+f
+
+# ## Solving using inplace variant and CG
+uₖ, _ = newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = CgSolver,
 )
 
-uₖ_2 = newton_krylov(
+ϵ = abs2.(uₖ .- reference)
+
+let
+    fig = Figure(size = (800, 800))
+    ax = Axis(fig[1, 1], title = "", ylabel = "", xlabel = "")
+
+    lines!(ax, x, reference, label = "True solution")
+    lines!(ax, x, u₀, label = "Initial guess")
+    lines!(ax, x, uₖ, label = "Newton-Krylov solution")
+
+    axislegend(ax, position = :cb)
+
+    ax = Axis(fig[1, 2], title = "Error", ylabel = "abs2 err", xlabel = "")
+    lines!(ax, abs2.(uₖ .- reference))
+
+    fig
+end
+
+# ## Solving using the out of place variant
+
+_, stats = newton_krylov(
     (u) -> bratu(u, dx, λ),
     copy(u₀);
     Solver = CgSolver
 )
-
-ϵ1 = abs2.(uₖ_1 .- reference)
-ϵ2 = abs2.(uₖ_1 .- reference)
+stats
 
 # ## Solving with a fixed forcing
-newton_krylov!(
+_, stats = newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = CgSolver,
-    forcing = NewtonKrylov.Fixed()
+    forcing = NewtonKrylov.Fixed(0.1)
 )
+stats
 
 # ## Solving with no forcing
-newton_krylov!(
+_, stats = newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = CgSolver,
     forcing = nothing
 )
+stats
 
-# ## Solve using GMRES -- very slow
+# ## Solve using GMRES -- doesn't converge
 # ```julia
-# @time newton_krylov!(
-# 	(res, u) -> bratu!(res, u, dx, λ),
-# 	copy(u₀), similar(u₀);
-# 	Solver = GmresSolver,
+# _, stats = newton_krylov!(
+#     (res, u) -> bratu!(res, u, dx, λ),
+#     copy(u₀), similar(u₀);
+#     Solver = GmresSolver,
 # )
+# stats
 # ```
 
 # ## Solve using GMRES + ILU Preconditoner
-@time newton_krylov!(
+_, stats = newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = GmresSolver,
     N = (J) -> ilu(collect(J)), # Assembles the full Jacobian
-    ldiv = true,
+    krylov_kwargs = (; ldiv = true)
 )
+stats
 
 # ## Solve using FGMRES + ILU Preconditoner
-@time newton_krylov!(
+_, stats = newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = FgmresSolver,
     N = (J) -> ilu(collect(J)), # Assembles the full Jacobian
-    ldiv = true,
+    krylov_kwargs = (; ldiv = true)
 )
+stats
 
 # ## Solve using FGMRES + GMRES Preconditoner
 struct GmresPreconditioner{JOp}
@@ -116,20 +146,21 @@ function LinearAlgebra.mul!(y, P::GmresPreconditioner, x)
     return copyto!(y, sol)
 end
 
-@time newton_krylov!(
+_, stats = newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = FgmresSolver,
-    N = (J) -> GmresPreconditioner(J, 30),
+    N = (J) -> GmresPreconditioner(J, 5),
 )
+stats
 
 # ## Explodes..
 # ```julia
 # newton_krylov!(
 # 	(res, u) -> bratu!(res, u, dx, λ),
 # 	copy(u₀), similar(u₀);
-# 	verbose = 1,
 # 	Solver = CglsSolver, # CgneSolver
+#   krylov_kwargs = (; verbose=1)
 # )
 # ```
 #
@@ -138,7 +169,7 @@ end
 # 	(res, u) -> bratu!(res, u, dx, λ),
 # 	copy(u₀), similar(u₀);
 # 	verbose = 1,
-# 	Solver = BicgstabSolver,
+# 	Solver = BicgstabSolver, # L=2
 # 	η_max = nothing
 # )
 # ```

@@ -128,6 +128,17 @@ function newton_krylov!(F!, u₀, M::Int = length(u₀); kwargs...)
     return newton_krylov!(F!, u₀, res; kwargs...)
 end
 
+struct Stats
+    outer_iterations::Int
+    inner_iterations::Int
+end
+function update(stats::Stats, inner_iterations)
+    return Stats(
+        stats.outer_iterations + 1,
+        stats.inner_iterations + inner_iterations
+    )
+end
+
 """
 
 ## Arguments
@@ -151,8 +162,9 @@ function newton_krylov!(
         Solver = CgSolver,
         M = nothing,
         N = nothing,
-        ldiv = false
+        krylov_kwargs = (;)
     )
+    t₀ = time_ns()
     F!(res, u) # res = F(u)
     n_res = norm(res)
     tol = tol_rel * n_res + tol_abs
@@ -166,10 +178,10 @@ function newton_krylov!(
     J = JacobianOperator(F!, res, u)
     solver = Solver(J, res)
 
-    n_iter = 1
-    while n_res > tol && n_iter <= max_niter
+    stats = Stats(0, 0)
+    while n_res > tol && stats.outer_iterations <= max_niter
         # Handle kwargs for Preconditoners
-        kwargs = (; ldiv, verbose = verbose - 1)
+        kwargs = krylov_kwargs
         if N !== nothing
             kwargs = (; N = N(J), kwargs...)
         end
@@ -198,22 +210,19 @@ function newton_krylov!(
         n_res = norm(res)
 
         if isinf(n_res) || isnan(n_res)
-            error("Inner solver blew up at iter=$n_iter")
+            @error "Inner solver blew up" stats
+            break
         end
 
         if forcing !== nothing
             η = forcing(η, tol, n_res, n_res_prior)
         end
 
-        verbose > 0 && @info "Newton" iter = n_iter n_res η
-        n_iter += 1
+        verbose > 0 && @info "Newton" iter = n_res η stats
+        stats = update(stats, solver.stats.niter)
     end
-    return u
+    t = (time_ns() - t₀) / 1.0e9
+    return u, (; solved = n_res <= tol, stats, t)
 end
-
-# TODO:
-# - Better statistic
-# - Allow choice of Krylov solver
-#   - maxit_krylov?
 
 end # module NewtonKrylov
