@@ -1,9 +1,13 @@
 # # 1D bratu equation
 
+# ## Necessary packages
 using NewtonKrylov, Krylov
 using KrylovPreconditioners
 using SparseArrays, LinearAlgebra
 using CairoMakie
+
+# ## 1D Bratu equations
+# $y′′ + λ * exp(y) = 0$
 
 function bratu!(res, y, Δx, λ)
     N = length(y)
@@ -23,21 +27,26 @@ function bratu(y, dx, λ)
     return res
 end
 
+# ## Reference solution
 function true_sol_bratu(x)
     ## for λ = 3.51382, 2nd sol θ = 4.8057
     θ = 4.79173
     return -2 * log(cosh(θ * (x - 0.5) / 2) / (cosh(θ / 4)))
 end
 
+# ## Choice of parameters
 const N = 10_000
 const λ = 3.51382
 const dx = 1 / (N + 1) # Grid-spacing
 
+# ### Domain and Inital condition
 x = LinRange(0.0 + dx, 1.0 - dx, N)
 u₀ = sin.(x .* π)
 
+# ## Reference solution evaluated over domain
 reference = true_sol_bratu.(x)
 
+# ## Solving using inplace and out-of-place variants
 uₖ_1 = newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
