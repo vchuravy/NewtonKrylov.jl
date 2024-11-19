@@ -121,12 +121,12 @@ function (F::EisenstatWalker)(η, tol, n_res, n_res_prior)
 end
 inital(F::EisenstatWalker) = F.η_max
 
-function newton_krylov(F, u₀, M::Int = length(u₀); kwargs...)
+function newton_krylov(F, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
     F!(res, u) = (res .= F(u); nothing)
     return newton_krylov!(F!, u₀, M; kwargs...)
 end
 
-function newton_krylov!(F!, u₀, M::Int = length(u₀); kwargs...)
+function newton_krylov!(F!, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
     return newton_krylov!(F!, u₀, res; kwargs...)
 end
@@ -156,20 +156,23 @@ end
              If `nothing` an exact Newton method is used.   
 """
 function newton_krylov!(
-        F!, u, res;
+        F!, u::AbstractArray, res::AbstractArray;
         tol_rel = 1.0e-6,
         tol_abs = 1.0e-12,
         max_niter = 50,
         forcing::Union{Forcing, Nothing} = EisenstatWalker(),
         verbose = 0,
-        Solver = CgSolver,
+        Solver = GmresSolver,
         M = nothing,
         N = nothing,
-        krylov_kwargs = (;)
+        krylov_kwargs = (;),
+        callback = (args...) -> nothing,
     )
     t₀ = time_ns()
     F!(res, u) # res = F(u)
     n_res = norm(res)
+    callback(u, res, n_res)
+
     tol = tol_rel * n_res + tol_abs
 
     if forcing !== nothing
@@ -208,9 +211,11 @@ function newton_krylov!(
         u .+= s .* d
 
         # Update residual and norm
-        F!(res, u) # res = F(u)
         n_res_prior = n_res
+
+        F!(res, u) # res = F(u)
         n_res = norm(res)
+        callback(u, res, n_res)
 
         if isinf(n_res) || isnan(n_res)
             @error "Inner solver blew up" stats

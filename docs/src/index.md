@@ -1,6 +1,6 @@
 # NewtonKrylov.jl
 
-
+Newton Method using Krylov.jl (montoison-orban-2023)[@cite]
 
 ## API
 
@@ -21,4 +21,9 @@ NewtonKrylov.EisenstatWalker
 
 ```@docs
 NewtonKrylov.JacobianOperator
+```
+
+## Bibliography
+
+```@bibliography
 ```

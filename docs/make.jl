@@ -4,6 +4,7 @@ using NewtonKrylov
 using Documenter
 import Documenter.Remotes: GitHub
 using Literate
+using DocumenterCitations
 
 DocMeta.setdocmeta!(NewtonKrylov, :DocTestSetup, :(using NewtonKrylov); recursive = true)
 
@@ -17,6 +18,8 @@ const OUTPUT_DIR = joinpath(@__DIR__, "src/generated")
 
 examples = [
     "Bratu 1D" => "bratu",
+    "Simple" => "simple",
+    "BVP" => "bvp",
 ]
 
 for (_, name) in examples
@@ -25,6 +28,8 @@ for (_, name) in examples
 end
 
 examples = [title => joinpath("generated", string(name, ".md")) for (title, name) in examples]
+
+bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"))
 
 makedocs(;
     modules = [NewtonKrylov],
@@ -40,6 +45,7 @@ makedocs(;
                 class = :js,
                 attributes = Dict(Symbol("data-domain") => "vchuravy.dev", :defer => "")
             ),
+            "assets/citations.css",
         ],
         mathengine = MathJax3(),
     ),
@@ -49,6 +55,7 @@ makedocs(;
     ],
     doctest = true,
     linkcheck = true,
+    plugins = [bib]
 )
 
 deploydocs(;

@@ -1,4 +1,4 @@
-# # 1D bratu equation
+# # 1D bratu equation from (Kan2022-ko)[@cite]
 
 # ## Necessary packages
 using NewtonKrylov, Krylov
