@@ -9,6 +9,8 @@ using CairoMakie
 # ## 1D Bratu equations
 # $y′′ + λ * exp(y) = 0$
 
+# F(u) = 0
+
 function bratu!(res, y, Δx, λ)
     N = length(y)
     for i in 1:N
@@ -48,10 +50,10 @@ lines(x, u₀, label = "Inital guess")
 # ## Reference solution evaluated over domain
 reference = true_sol_bratu.(x)
 
-f, ax = lines(x, u₀, label = "Inital guess")
+fig, ax = lines(x, u₀, label = "Inital guess")
 lines!(ax, x, reference, label = "Reference solution")
 axislegend(ax, position = :cb)
-f
+fig
 
 # ## Solving using inplace variant and CG
 uₖ, _ = newton_krylov!(
