@@ -167,8 +167,12 @@ function newton_krylov!(
         N = nothing,
         krylov_kwargs = (;),
         callback = (args...) -> nothing,
+        norm = norm,
+        update! = (u) -> nothing
     )
     t₀ = time_ns()
+    
+    update!(u) # Impose BC
     F!(res, u) # res = F(u)
     n_res = norm(res)
     callback(u, res, n_res)
@@ -213,6 +217,7 @@ function newton_krylov!(
         # Update residual and norm
         n_res_prior = n_res
 
+        update!(u) # Impose BC
         F!(res, u) # res = F(u)
         n_res = norm(res)
         callback(u, res, n_res)
