@@ -7,15 +7,6 @@ using SparseArrays, LinearAlgebra
 using OffsetArrays
 using MPI
 
-using EnzymeCore
-import EnzymeCore.EnzymeRules: forward
-using EnzymeCore.EnzymeRules
-
-function forward(::FwdConfig, func::Const{MPI.Request}, ::Type{<:Duplicated})
-    # Enzyme: unhandled forward for jl_f_finalizer
-    return Duplicated(MPI.Request(), MPI.Request())
-end
-
 MPI.Init()
 
 nranks = MPI.Comm_size(MPI.COMM_WORLD)
@@ -45,16 +36,13 @@ u₀ = sin.(x .* π)
 # ## 1D Bratu equations
 # $y′′ + λ * exp(y) = 0$
 
-
-
-function bratu!(_res, _y, Δx, λ, N)
-    res = OffsetArray(_res, 0:(N+1))
+function update!(_y, N)
     y  = OffsetArray(_y, 0:(N+1))
 
     # Set boundary conditions
     nranks = MPI.Comm_size(MPI.COMM_WORLD)
     myid   = MPI.Comm_rank(MPI.COMM_WORLD)
-   
+    
     ## BVP boundary condition
     if myid == 0
         y[0] = 0
@@ -69,14 +57,20 @@ function bratu!(_res, _y, Δx, λ, N)
     if myid != (nranks - 1)
         # Send & data to the right
         MPI.Isend(view(y, N), MPI.COMM_WORLD, reqs[1]; dest = myid + 1)
-        MPI.Irecv!(view(y, N+1), MPI.COMM_WORLD, reqs[2]; src = myid + 1)
+        MPI.Irecv!(view(y, N+1), MPI.COMM_WORLD, reqs[2]; source = myid + 1)
     end
     if myid != 0
         # Send data to the left
         MPI.Isend(view(y, 1), MPI.COMM_WORLD, reqs[3]; dest = myid - 1)
-        MPI.Irecv!(view(y, 0), MPI.COMM_WORLD, reqs[4]; src = myid - 1)
+        MPI.Irecv!(view(y, 0), MPI.COMM_WORLD, reqs[4]; source = myid - 1)
     end
     MPI.Waitall(reqs)
+    return nothing
+end
+
+function bratu!(_res, _y, Δx, λ, N)
+    res = OffsetArray(_res, 0:(N+1))
+    y  = OffsetArray(_y, 0:(N+1))
 
     ## Calculate residual
     for i in 1:N
@@ -107,5 +101,7 @@ uₖ, _ = newton_krylov!(
     (res, u) -> bratu!(res, u, dx, λ, N),
     copy(u₀), similar(u₀);
     Solver = CgSolver,
+    update! = (u)->update!(u, N),
+    norm = u->sqrt(MPI.Allreduce(sum(abs2, u), +, MPI.COMM_WORLD))
 )
 
