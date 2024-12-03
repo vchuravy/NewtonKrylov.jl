@@ -171,7 +171,7 @@ function newton_krylov!(
         update! = (u) -> nothing
     )
     t₀ = time_ns()
-    
+
     update!(u) # Impose BC
     F!(res, u) # res = F(u)
     n_res = norm(res)
@@ -206,7 +206,9 @@ function newton_krylov!(
         # Solve: Jx = -res
         # res is modifyed by J, so we create a copy `-res`
         # TODO: provide a temporary storage for `-res`
-        solve!(solver, J, -res; kwargs...)
+        b = copy(res)
+        b .*= - 1
+        solve!(solver, J, b; kwargs...)
 
         d = solver.x # Newton direction
         s = 1        # Newton step TODO: LineSearch

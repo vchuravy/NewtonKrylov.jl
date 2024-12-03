@@ -9,10 +9,48 @@ using SparseArrays, LinearAlgebra
 using OffsetArrays
 using MPI
 
-MPI.Init()
+struct LocalData{FC, D} <: AbstractVector{FC}
+    data::D
 
-const nranks = MPI.Comm_size(MPI.COMM_WORLD)
-const myid = MPI.Comm_rank(MPI.COMM_WORLD)
+    function LocalData(data::D) where {D}
+        FC = eltype(data)
+        return new{FC, D}(data)
+    end
+end
+
+function LocalData{FC, D}(::UndefInitializer, l::Int64) where {FC, D}
+    return LocalData(D(undef, l))
+end
+
+Base.length(v::LocalData) = return length(v.data)
+
+Base.size(v::LocalData) = return size(v.data)
+
+Base.@propagate_inbounds function Base.getindex(v::LocalData, idx)
+    return getindex(v.data, idx)
+end
+
+Base.@propagate_inbounds function Base.setindex!(v::LocalData, x, idx)
+    return setindex!(v.data, x, idx)
+end
+
+Base.similar(v::LocalData) = LocalData(similar(v.data))
+Base.copy(v::LocalData) = LocalData(copy(v.data))
+function Base.cconvert(::Type{MPI.MPIPtr}, buf::LocalData)
+    return buf.data
+end
+
+using Krylov
+import Krylov.FloatOrComplex
+
+function Krylov.kdot(n::Integer, x::LocalData{T}, y::LocalData{T}) where {T <: FloatOrComplex}
+    return MPI.Allreduce(dot(x.data, y.data), +, MPI.COMM_WORLD)
+end
+
+function Krylov.knorm(n::Integer, x::LocalData{T}) where {T <: FloatOrComplex}
+    # TODO: We need to not double count the boundary
+    return sqrt(MPI.Allreduce(sum(abs2, x.data), +, MPI.COMM_WORLD))
+end
 
 # We are going to split a domain of size N
 # into equal chunks.
@@ -24,28 +62,12 @@ function localdomain(N, nranks, myrank)
     return first:last
 end
 
-# ## Choice of parameters
-const N = 10_000
-const λ = 3.51382
-const dx = 1 / (N + 1) # Grid-spacing
-
-# ### Domain and Inital condition
-LI = localdomain(N, nranks, myid)
-const l_N = length(LI)
-@show l_N
-u₀ = Vector{Float64}(undef, l_N + 2)
-
-X = LinRange(0.0, 1.0, N) # Global
-x = view(X, LI)
-
-u₀[2:(l_N + 1)] = sin.(x .* π)
-U₀ = MPI.Gather(view(u₀, 2:(l_N + 1)), MPI.COMM_WORLD)
 
 # ## 1D Bratu equations
 # $y′′ + λ * exp(y) = 0$
 
-function update!(_y, N)
-    y = OffsetArray(_y, 0:(N + 1))
+function update!(_y::LocalData, N)
+    y = OffsetArray(_y.data, 0:(N + 1))
 
     # Set boundary conditions
     nranks = MPI.Comm_size(MPI.COMM_WORLD)
@@ -80,6 +102,9 @@ function bratu!(_res, _y, Δx, λ, N)
     res = OffsetArray(_res, 0:(N + 1))
     y = OffsetArray(_y, 0:(N + 1))
 
+    # res is N+2 and knorm doesn't know that
+    res[N + 1] = 0
+    res[0] = 0
     ## Calculate residual
     for i in 1:N
         y_l = y[i - 1]
@@ -104,8 +129,38 @@ function true_sol_bratu(x)
     return -2 * log(cosh(θ * (x - 0.5) / 2) / (cosh(θ / 4)))
 end
 
-u₀ = OffsetArray(u₀, 0:(l_N + 1))
+# # Setup
+MPI.Init()
+
+const nranks = MPI.Comm_size(MPI.COMM_WORLD)
+const myid = MPI.Comm_rank(MPI.COMM_WORLD)
+
+# ## Choice of parameters
+const N = 10_000
+const λ = 3.51382
+const dx = 1 / (N + 1) # Grid-spacing
+
+# ### Domain and Inital condition
+LI = localdomain(N, nranks, myid)
+const l_N = length(LI)
+u₀ = Vector{Float64}(undef, l_N + 2)
+
+X = LinRange(0.0 + dx, 1.0 - dx, N) # Global
+x = view(X, LI)
+
+u₀[2:(l_N + 1)] = sin.(x .* π)
+
+u₀ = LocalData(u₀) #, 0:(l_N + 1))
 update!(u₀, l_N)
+
+U₀ = MPI.Gather(view(u₀, 2:(l_N + 1)), MPI.COMM_WORLD)
+
+@show Krylov.knorm(length(u₀), u₀)
+if myid == 0
+    @show Krylov.knorm(length(U₀), U₀)
+end
+@show typeof(similar(u₀))
+@show typeof(copy(u₀))
 
 # ## Solving using inplace variant and CG
 uₖ, _ = newton_krylov!(
@@ -113,10 +168,17 @@ uₖ, _ = newton_krylov!(
     copy(u₀), similar(u₀);
     Solver = CgSolver,
     update! = (u) -> update!(u, l_N),
-    norm = u -> sqrt(MPI.Allreduce(sum(abs2, u), +, MPI.COMM_WORLD))
+    norm = u -> Krylov.knorm(length(u), u),
+    verbose = myid == 0 ? 1 : 0
 )
 
 Uₖ = MPI.Gather(view(uₖ, 2:(l_N + 1)), MPI.COMM_WORLD)
+
+@show Krylov.knorm(length(uₖ), uₖ)
+if myid == 0
+    @show Krylov.knorm(length(Uₖ), Uₖ)
+end
+
 if myid == 0
     using CairoMakie
 
@@ -133,7 +195,7 @@ if myid == 0
     axislegend(ax, position = :cb)
 
     ax = Axis(fig[1, 2], title = "Error", ylabel = "abs2 err", xlabel = "")
-    lines!(ax, ϵ)
+    lines!(ax, X, ϵ)
 
-    save("bratu_mpi.png", fig)
+    save("bratu_mpi_n$(nranks).png", fig)
 end
