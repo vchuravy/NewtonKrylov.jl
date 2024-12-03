@@ -67,12 +67,12 @@ end
 
 function Base.collect(JOp::JacobianOperator)
     N, M = size(JOp)
-    v = zeros(eltype(JOp), M)
-    out = zeros(eltype(JOp), N)
+    v = zero(JOp.u)
+    out = zero(JOp.res)
     J = SparseMatrixCSC{eltype(v), Int}(undef, size(JOp)...)
     for j in 1:M
-        out .= 0.0
-        v .= 0.0
+        out .= 0
+        v .= 0
         v[j] = 1.0
         mul!(out, JOp, v)
         for i in 1:N
@@ -187,6 +187,7 @@ function newton_krylov!(
 
     J = JacobianOperator(F!, res, u)
     solver = Solver(J, res)
+    b = similar(res)
 
     stats = Stats(0, 0)
     while n_res > tol && stats.outer_iterations <= max_niter
@@ -205,9 +206,7 @@ function newton_krylov!(
 
         # Solve: Jx = -res
         # res is modifyed by J, so we create a copy `-res`
-        # TODO: provide a temporary storage for `-res`
-        b = copy(res)
-        b .*= - 1
+        b .= .- res
         solve!(solver, J, b; kwargs...)
 
         d = solver.x # Newton direction
@@ -233,7 +232,7 @@ function newton_krylov!(
             η = forcing(η, tol, n_res, n_res_prior)
         end
 
-        verbose > 0 && @info "Newton" iter = n_res η stats
+        verbose > 0 && @info "Newton" resᵢ = n_res η stats
         stats = update(stats, solver.stats.niter)
     end
     t = (time_ns() - t₀) / 1.0e9
