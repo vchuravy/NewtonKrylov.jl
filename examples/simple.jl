@@ -48,3 +48,8 @@ end
 lines!(ax, trace_3)
 
 fig
+
+# ## Extract Jacobian
+
+JOp = NewtonKrylov.JacobianOperator(F!, zeros(2), [3.0, 4.0])
+J = collect(JOp)
