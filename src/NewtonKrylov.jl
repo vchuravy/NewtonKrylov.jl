@@ -193,7 +193,8 @@ function newton_krylov!(
         krylov_kwargs = (;),
         callback = (args...) -> nothing,
         norm = norm,
-        update! = (u) -> nothing
+        update! = (u) -> nothing,
+        Operator = JacobianOperator,
     )
     t₀ = time_ns()
 
@@ -210,7 +211,7 @@ function newton_krylov!(
 
     verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀ = n_res tol tol_rel tol_abs η
 
-    J = JacobianOperator(F!, res, u)
+    J = Operator(F!, res, u)
     solver = Solver(J, res)
     b = similar(res)
 
