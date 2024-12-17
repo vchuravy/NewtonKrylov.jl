@@ -39,13 +39,11 @@ u₀ = sin.(x .* π)
 JOp = NewtonKrylov.JacobianOperator(
     (res, u) -> bratu!(res, u, dx, λ),
     similar(u₀),
-    copy(u₀)
+    copy(u₀);
+    symmetric = true
 )
 
-# Q: is this generally true
-LinearAlgebra.issymmetric(::NewtonKrylov.JacobianOperator) = true
-
-# issymmetric(collect(JOp))
+@assert issymmetric(collect(JOp))
 
 l, ϕ = eigs(JOp; nev = 10)
 l2, ϕ2 = eigs(collect(JOp); nev = 10)

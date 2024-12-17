@@ -24,14 +24,17 @@ struct JacobianOperator{F, A}
     f_cache::F
     res::A
     u::A
-    function JacobianOperator(f::F, res, u) where {F}
+    symmetric::Union{Bool,Missing}
+    function JacobianOperator(f::F, res, u; symmetric=missing) where {F}
         f_cache = Enzyme.make_zero(f)
-        return new{F, typeof(u)}(f, f_cache, res, u)
+        return new{F, typeof(u)}(f, f_cache, res, u, symmetric, hermetian)
     end
 end
 
 Base.size(J::JacobianOperator) = (length(J.res), length(J.u))
 Base.eltype(J::JacobianOperator) = eltype(J.u)
+
+LinearAlgebra.issymmetric(J::JacobianOperator) = J.symmetric
 
 function mul!(out::A, J::JacobianOperator{F,A}, v::A) where {F, A}
     # Enzyme.make_zero!(J.f_cache)
