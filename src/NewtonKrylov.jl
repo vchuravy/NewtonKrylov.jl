@@ -19,7 +19,9 @@ function maybe_duplicated(f, df)
     end
 end
 
-struct JacobianOperator{F, A}
+abstract type AbstractJacobianOperator end
+
+struct JacobianOperator{F, A} <: AbstractJacobianOperator
     f::F # F!(res, u)
     f_cache::F
     res::A
@@ -65,7 +67,7 @@ function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:A
     return nothing
 end
 
-function Base.collect(JOp::JacobianOperator)
+function Base.collect(JOp::AbstractJacobianOperator)
     N, M = size(JOp)
     v = zero(JOp.u)
     out = zero(JOp.res)
@@ -82,6 +84,29 @@ function Base.collect(JOp::JacobianOperator)
         end
     end
     return J
+end
+
+struct FDJacobianOperator{F, A} <: AbstractJacobianOperator
+    f::F # F!(res, u)
+    res::A
+    u::A
+    function FDJacobianOperator(f::F, res, u) where {F}
+        return new{F, typeof(u)}(f, res, u)
+    end
+end
+
+Base.size(J::FDJacobianOperator) = (length(J.res), length(J.u))
+Base.eltype(J::FDJacobianOperator) = eltype(J.u)
+
+function mul!(out, J::FDJacobianOperator, v)
+    ϵ = cbrt(eps()/2)
+    # (F(u + ϵ .* v) - F(u - ϵ .* v)) ./ 2ϵ
+
+    J.f(J.res, J.u .+ ϵ .* v)
+    out .= J.res
+    J.f(J.res, J.u .- ϵ .* v)
+    out .= (out .- J.res) ./ 2ϵ 
+    return nothing
 end
 
 ##
