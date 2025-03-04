@@ -89,6 +89,27 @@ function Base.collect(JOp::JacobianOperator)
     return J
 end
 
+struct HessianOperator{F, A}
+    J::JacobianOperator{F, A}
+    J_cache::JacobianOperator{F, A}
+end
+HessianOperator(J) = HessianOperator(J, Enzyme.make_zero(J))
+
+Base.size(H::HessianOperator) = size(H.J)
+Base.eltype(H::HessianOperator) = eltype(H.J)
+
+function mul!(out, H::HessianOperator, v)
+    _out = similar(H.J.res) # TODO cache in H
+    du = Enzyme.make_zero(H.J.u) # TODO cache in H
+
+    autodiff(Forward, mul!, 
+        DuplicatedNoNeed(_out, out), 
+        DuplicatedNoNeed(H.J, H.J_cache), 
+        DuplicatedNoNeed(du, v))
+
+    return nothing
+end
+
 ##
 # Newton-Krylov
 ##
