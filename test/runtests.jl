@@ -23,11 +23,11 @@ let x₀ = [3.0, 5.0]
 end
 
 import NewtonKrylov: JacobianOperator
-using Enzyme
+using Enzyme, LinearAlgebra
 
 @testset "Jacobian" begin
     J_Enz = jacobian(Forward, F, [3.0, 5.0]) |> only
-    J = JacobianOperator(F!, zeros(2), [3.0, 5.0],)
+    J = JacobianOperator(F!, zeros(2), [3.0, 5.0])
     J_NK = collect(J)
 
     @test J_NK == J_Enz
