@@ -273,15 +273,15 @@ function newton_krylov!(
         end
 
         # Solve: Jx = -res
-        # res is modifyed by J, so we create a copy `-res`
-        # TODO: provide a temporary storage for `-res`
-        solve!(solver, J, -res; kwargs...)
+        # res is modifyed by J, so we create a copy `res`
+        # TODO: provide a temporary storage for `res`
+        solve!(solver, J, copy(res); kwargs...)
 
         d = solver.x # Newton direction
         s = 1        # Newton step TODO: LineSearch
 
         # Update u
-        u .+= s .* d
+        @. u -= s * d
 
         # Update residual and norm
         n_res_prior = n_res
@@ -299,7 +299,7 @@ function newton_krylov!(
             η = forcing(η, tol, n_res, n_res_prior)
         end
 
-        verbose > 0 && @info "Newton" iter = n_res η stats
+        verbose > 0 && @info "Newton" iter = n_res η=(forcing !== nothing ? η : nothing) stats
         stats = update(stats, solver.stats.niter)
     end
     t = (time_ns() - t₀) / 1.0e9
