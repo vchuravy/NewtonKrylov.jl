@@ -59,19 +59,19 @@ end</code></pre><img src="1a523fb1.png" alt="Example block output"/><h2 id="Solv
     copy(u₀);
     Solver = CgSolver
 )
-stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(11, 60694), t = 6.596677702)</code></pre><h2 id="Solving-with-a-fixed-forcing"><a class="docs-heading-anchor" href="#Solving-with-a-fixed-forcing">Solving with a fixed forcing</a><a id="Solving-with-a-fixed-forcing-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-with-a-fixed-forcing" title="Permalink"></a></h2><pre><code class="language-julia hljs">_, stats = newton_krylov!(
+stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(11, 60694), t = 6.670774508)</code></pre><h2 id="Solving-with-a-fixed-forcing"><a class="docs-heading-anchor" href="#Solving-with-a-fixed-forcing">Solving with a fixed forcing</a><a id="Solving-with-a-fixed-forcing-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-with-a-fixed-forcing" title="Permalink"></a></h2><pre><code class="language-julia hljs">_, stats = newton_krylov!(
     (res, u) -&gt; bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = CgSolver,
     forcing = NewtonKrylov.Fixed(0.1)
 )
-stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(8, 56944), t = 4.67132329)</code></pre><h2 id="Solving-with-no-forcing"><a class="docs-heading-anchor" href="#Solving-with-no-forcing">Solving with no forcing</a><a id="Solving-with-no-forcing-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-with-no-forcing" title="Permalink"></a></h2><pre><code class="language-julia hljs">_, stats = newton_krylov!(
+stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(8, 56944), t = 4.69897791)</code></pre><h2 id="Solving-with-no-forcing"><a class="docs-heading-anchor" href="#Solving-with-no-forcing">Solving with no forcing</a><a id="Solving-with-no-forcing-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-with-no-forcing" title="Permalink"></a></h2><pre><code class="language-julia hljs">_, stats = newton_krylov!(
     (res, u) -&gt; bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = CgSolver,
     forcing = nothing
 )
-stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(8, 72386), t = 5.978272752)</code></pre><h2 id="Solve-using-GMRES-–-doesn&#39;t-converge"><a class="docs-heading-anchor" href="#Solve-using-GMRES-–-doesn&#39;t-converge">Solve using GMRES – doesn&#39;t converge</a><a id="Solve-using-GMRES-–-doesn&#39;t-converge-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-GMRES-–-doesn&#39;t-converge" title="Permalink"></a></h2><pre><code class="language-julia hljs">_, stats = newton_krylov!(
+stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(8, 72386), t = 5.928102241)</code></pre><h2 id="Solve-using-GMRES-–-doesn&#39;t-converge"><a class="docs-heading-anchor" href="#Solve-using-GMRES-–-doesn&#39;t-converge">Solve using GMRES – doesn&#39;t converge</a><a id="Solve-using-GMRES-–-doesn&#39;t-converge-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-GMRES-–-doesn&#39;t-converge" title="Permalink"></a></h2><pre><code class="language-julia hljs">_, stats = newton_krylov!(
     (res, u) -&gt; bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = GmresSolver,
@@ -83,14 +83,14 @@ stats</code></pre><h2 id="Solve-using-GMRES-ILU-Preconditoner"><a class="docs-he
     N = (J) -&gt; ilu(collect(J)), # Assembles the full Jacobian
     krylov_kwargs = (; ldiv = true)
 )
-stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(8, 8), t = 6.463574388)</code></pre><h2 id="Solve-using-FGMRES-ILU-Preconditoner"><a class="docs-heading-anchor" href="#Solve-using-FGMRES-ILU-Preconditoner">Solve using FGMRES + ILU Preconditoner</a><a id="Solve-using-FGMRES-ILU-Preconditoner-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-FGMRES-ILU-Preconditoner" title="Permalink"></a></h2><pre><code class="language-julia hljs">_, stats = newton_krylov!(
+stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(8, 8), t = 6.425233467)</code></pre><h2 id="Solve-using-FGMRES-ILU-Preconditoner"><a class="docs-heading-anchor" href="#Solve-using-FGMRES-ILU-Preconditoner">Solve using FGMRES + ILU Preconditoner</a><a id="Solve-using-FGMRES-ILU-Preconditoner-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-FGMRES-ILU-Preconditoner" title="Permalink"></a></h2><pre><code class="language-julia hljs">_, stats = newton_krylov!(
     (res, u) -&gt; bratu!(res, u, dx, λ),
     copy(u₀), similar(u₀);
     Solver = FgmresSolver,
     N = (J) -&gt; ilu(collect(J)), # Assembles the full Jacobian
     krylov_kwargs = (; ldiv = true)
 )
-stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(8, 8), t = 6.511874176)</code></pre><h2 id="Solve-using-FGMRES-GMRES-Preconditoner"><a class="docs-heading-anchor" href="#Solve-using-FGMRES-GMRES-Preconditoner">Solve using FGMRES + GMRES Preconditoner</a><a id="Solve-using-FGMRES-GMRES-Preconditoner-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-FGMRES-GMRES-Preconditoner" title="Permalink"></a></h2><pre><code class="language-julia hljs">struct GmresPreconditioner{JOp}
+stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(8, 8), t = 6.44028847)</code></pre><h2 id="Solve-using-FGMRES-GMRES-Preconditoner"><a class="docs-heading-anchor" href="#Solve-using-FGMRES-GMRES-Preconditoner">Solve using FGMRES + GMRES Preconditoner</a><a id="Solve-using-FGMRES-GMRES-Preconditoner-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-using-FGMRES-GMRES-Preconditoner" title="Permalink"></a></h2><pre><code class="language-julia hljs">struct GmresPreconditioner{JOp}
     J::JOp
     itmax::Int
 end
@@ -106,7 +106,7 @@ _, stats = newton_krylov!(
     Solver = FgmresSolver,
     N = (J) -&gt; GmresPreconditioner(J, 5),
 )
-stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(12, 11596), t = 55.908718925)</code></pre><h2 id="Explodes.."><a class="docs-heading-anchor" href="#Explodes..">Explodes..</a><a id="Explodes..-1"></a><a class="docs-heading-anchor-permalink" href="#Explodes.." title="Permalink"></a></h2><pre><code class="language-julia hljs">newton_krylov!(
+stats</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(solved = true, stats = NewtonKrylov.Stats(12, 11596), t = 54.977282432)</code></pre><h2 id="Explodes.."><a class="docs-heading-anchor" href="#Explodes..">Explodes..</a><a id="Explodes..-1"></a><a class="docs-heading-anchor-permalink" href="#Explodes.." title="Permalink"></a></h2><pre><code class="language-julia hljs">newton_krylov!(
 	(res, u) -&gt; bratu!(res, u, dx, λ),
 	copy(u₀), similar(u₀);
 	Solver = CglsSolver, # CgneSolver
@@ -117,4 +117,4 @@ stats</code></pre><pre class="documenter-example-output"><code class="nohighligh
 	verbose = 1,
 	Solver = BicgstabSolver, # L=2
 	η_max = nothing
-)</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../simple/">Simple »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Wednesday 5 March 2025 09:28">Wednesday 5 March 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+)</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../simple/">Simple »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.8.1 on <span class="colophon-date" title="Wednesday 5 March 2025 14:53">Wednesday 5 March 2025</span>. Using Julia version 1.11.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
