@@ -79,7 +79,9 @@ end
     ddf!(hvvp, x, v)
 
     hvvp2 = ddf(x, v)
-    @test hvvp == hvvp2
+    # Enzyme seems to disagree with itself only on MacOs/Windows so probably we need to look at
+    # second derivative of exp (which Enzyme will be using the system libm for iirc)
+    @test hvvp ≈ hvvp2
 
     J = JacobianOperator(F!, zeros(2), x)
     H = HessianOperator(J)
