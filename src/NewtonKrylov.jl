@@ -318,6 +318,8 @@ end
 """
     halley_krylov(F, u₀::AbstractArray, M::Int = length(u₀))
 
+Halley method after (Tan2025-al)[@cite].
+
 ## Arguments
   - `F`: `F(u)` solves `res = F(u) = 0`
   - `u`: Initial guess
@@ -333,6 +335,8 @@ end
 """
     halley_krylov!(F!, u₀::AbstractArray, M::Int = length(u₀))
 
+Halley method after (Tan2025-al)[@cite].
+
 ## Arguments
   - `F!`: `F!(res, u)` solves `res = F(u) = 0`
   - `u`: Initial guess
@@ -347,6 +351,8 @@ end
 
 """
     halley_krylov!(F!, u::AbstractArray, res::AbstractArray)
+
+Halley method after (Tan2025-al)[@cite].
 
 ## Arguments
   - `F!`: `F!(res, u)` solves `res = F(u) = 0`
