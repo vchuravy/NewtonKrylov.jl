@@ -25,16 +25,69 @@ end
 import NewtonKrylov: JacobianOperator
 using Enzyme, LinearAlgebra
 
+function df(x, a)
+    return autodiff(Forward, F, DuplicatedNoNeed(x, a)) |> first
+end
+
+function df!(out, x, a)
+    res = similar(out)
+    autodiff(Forward, F!, DuplicatedNoNeed(res, out), DuplicatedNoNeed(x, a))
+    return nothing
+end
+
 @testset "Jacobian" begin
-    J_Enz = jacobian(Forward, F, [3.0, 5.0]) |> only
-    J = JacobianOperator(F!, zeros(2), [3.0, 5.0])
+    x = [3.0, 5.0]
+    v = rand(2)
+
+    J_Enz = jacobian(Forward, F, x) |> only
+    J = JacobianOperator(F!, zeros(2), x)
     J_NK = collect(J)
 
     @test J_NK == J_Enz
 
-    v = rand(2)
-    out = similar(v)
-    mul!(out, J, v)
+    jvp = similar(v)
+    mul!(jvp, J, v)
 
-    @test out ≈ J_Enz * v
+    jvp2 = df(x, v)
+    @test jvp == jvp2
+
+    jvp3 = similar(v)
+    df!(jvp3, x, v)
+    @test jvp == jvp3
+
+    @test jvp ≈ J_Enz * v
+end
+
+import NewtonKrylov: HessianOperator
+
+# Differentiate F with respect to x twice.
+function ddf(x, a)
+    return autodiff(Forward, df, DuplicatedNoNeed(x, a), Const(a)) |> first
+end
+
+function ddf!(out, x, a)
+    _out = similar(out)
+    autodiff(Forward, df!, DuplicatedNoNeed(_out, out), DuplicatedNoNeed(x, a), Const(a))
+    return nothing
+end
+
+@testset "2nd order directional derivative" begin
+    x = [3.0, 5.0]
+    v = rand(2)
+
+    hvvp = similar(x)
+    ddf!(hvvp, x, v)
+
+    hvvp2 = ddf(x, v)
+    # Enzyme seems to disagree with itself only on MacOs/Windows so probably we need to look at
+    # second derivative of exp (which Enzyme will be using the system libm for iirc)
+    @test hvvp ≈ hvvp2
+
+    J = JacobianOperator(F!, zeros(2), x)
+    H = HessianOperator(J)
+
+    hvvp3 = similar(x)
+    mul!(hvvp3, H, v)
+
+    @test hvvp == hvvp3
 end

@@ -1,6 +1,7 @@
 module NewtonKrylov
 
 export newton_krylov, newton_krylov!
+export halley_krylov, halley_krylov!
 
 using Krylov
 using LinearAlgebra, SparseArrays
@@ -87,6 +88,35 @@ function Base.collect(JOp::JacobianOperator)
         end
     end
     return J
+end
+
+"""
+    HessianOperator
+
+Calculcates H(F, u) * v * v
+"""
+struct HessianOperator{F, A}
+    J::JacobianOperator{F, A}
+    J_cache::JacobianOperator{F, A}
+end
+HessianOperator(J) = HessianOperator(J, Enzyme.make_zero(J))
+
+Base.size(H::HessianOperator) = size(H.J)
+Base.eltype(H::HessianOperator) = eltype(H.J)
+
+function mul!(out, H::HessianOperator, v)
+    _out = similar(H.J.res) # TODO cache in H
+    Enzyme.make_zero!(H.J_cache)
+    H.J_cache.u .= v
+    autodiff(
+        Forward,
+        mul!,
+        DuplicatedNoNeed(_out, out),
+        DuplicatedNoNeed(H.J, H.J_cache),
+        Const(v)
+    )
+
+    return nothing
 end
 
 ##
@@ -252,15 +282,15 @@ function newton_krylov!(
         end
 
         # Solve: Jx = -res
-        # res is modifyed by J, so we create a copy `-res`
-        # TODO: provide a temporary storage for `-res`
-        solve!(solver, J, -res; kwargs...)
+        # res is modifyed by J, so we create a copy `res`
+        # TODO: provide a temporary storage for `res`
+        solve!(solver, J, copy(res); kwargs...)
 
         d = solver.x # Newton direction
         s = 1        # Newton step TODO: LineSearch
 
         # Update u
-        u .+= s .* d
+        @. u -= s * d
 
         # Update residual and norm
         n_res_prior = n_res
@@ -278,8 +308,135 @@ function newton_krylov!(
             η = forcing(η, tol, n_res, n_res_prior)
         end
 
-        verbose > 0 && @info "Newton" iter = n_res η stats
+        verbose > 0 && @info "Newton" iter = n_res η = (forcing !== nothing ? η : nothing) stats
         stats = update(stats, solver.stats.niter)
+    end
+    t = (time_ns() - t₀) / 1.0e9
+    return u, (; solved = n_res <= tol, stats, t)
+end
+
+"""
+    halley_krylov(F, u₀::AbstractArray, M::Int = length(u₀))
+
+Halley method after (Tan2025-al)[@cite].
+
+## Arguments
+  - `F`: `F(u)` solves `res = F(u) = 0`
+  - `u`: Initial guess
+  - `M`: Length of the output of `F`. Defaults to `length(u₀)`.
+ 
+$(KWARGS_DOCS)
+"""
+function halley_krylov(F, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
+    F!(res, u) = (res .= F(u); nothing)
+    return halley_krylov!(F!, u₀, M; kwargs...)
+end
+
+"""
+    halley_krylov!(F!, u₀::AbstractArray, M::Int = length(u₀))
+
+Halley method after (Tan2025-al)[@cite].
+
+## Arguments
+  - `F!`: `F!(res, u)` solves `res = F(u) = 0`
+  - `u`: Initial guess
+  - `M`: Length of the output of `F!`. Defaults to `length(u₀)`.
+ 
+$(KWARGS_DOCS)
+"""
+function halley_krylov!(F!, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
+    res = similar(u₀, M)
+    return halley_krylov!(F!, u₀, res; kwargs...)
+end
+
+"""
+    halley_krylov!(F!, u::AbstractArray, res::AbstractArray)
+
+Halley method after (Tan2025-al)[@cite].
+
+## Arguments
+  - `F!`: `F!(res, u)` solves `res = F(u) = 0`
+  - `u`: Initial guess
+  - `res`: Temporary for residual
+ 
+$(KWARGS_DOCS)
+"""
+function halley_krylov!(
+        F!, u::AbstractArray, res::AbstractArray;
+        tol_rel = 1.0e-6,
+        tol_abs = 1.0e-12,
+        max_niter = 50,
+        forcing::Union{Forcing, Nothing} = EisenstatWalker(),
+        verbose = 0,
+        Solver = GmresSolver,
+        M = nothing,
+        N = nothing,
+        krylov_kwargs = (;),
+        callback = (args...) -> nothing,
+    )
+    t₀ = time_ns()
+    F!(res, u) # res = F(u)
+    n_res = norm(res)
+    callback(u, res, n_res)
+
+    tol = tol_rel * n_res + tol_abs
+
+    if forcing !== nothing
+        η = inital(forcing)
+    end
+
+    verbose > 0 && @info "Jacobian-Free Halley-Krylov" Solver res₀ = n_res tol tol_rel tol_abs η
+
+    J = JacobianOperator(F!, res, u)
+    H = HessianOperator(J)
+    solver = Solver(J, res)
+
+    stats = Stats(0, 0)
+    while n_res > tol && stats.outer_iterations <= max_niter
+        # Handle kwargs for Preconditoners
+        kwargs = krylov_kwargs
+        if N !== nothing
+            kwargs = (; N = N(J), kwargs...)
+        end
+        if M !== nothing
+            kwargs = (; M = M(J), kwargs...)
+        end
+        if forcing !== nothing
+            # ‖F′(u)d + F(u)‖ <= η * ‖F(u)‖ Inexact Newton termination
+            kwargs = (; rtol = η, kwargs...)
+        end
+
+        solve!(solver, J, copy(res); kwargs...) # J \ fx
+        a = copy(solver.x)
+
+        # calculate hvvp (2nd order directional derivative using the JVP)
+        hvvp = similar(res)
+        mul!(hvvp, H, a)
+
+        solve!(solver, J, hvvp; kwargs...) # J \ hvvp
+        b = solver.x
+
+        # Update u
+        @. u -= (a * a) / (a - b / 2)
+
+        # Update residual and norm
+        n_res_prior = n_res
+
+        F!(res, u) # res = F(u)
+        n_res = norm(res)
+        callback(u, res, n_res)
+
+        if isinf(n_res) || isnan(n_res)
+            @error "Inner solver blew up" stats
+            break
+        end
+
+        if forcing !== nothing
+            η = forcing(η, tol, n_res, n_res_prior)
+        end
+
+        verbose > 0 && @info "Newton" iter = n_res η = (forcing !== nothing ? η : nothing) stats
+        stats = update(stats, solver.stats.niter) # TODO we do two calls to solver iterations
     end
     t = (time_ns() - t₀) / 1.0e9
     return u, (; solved = n_res <= tol, stats, t)
