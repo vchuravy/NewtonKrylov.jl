@@ -23,7 +23,8 @@ end
 function bratu!(res, y, Δx, λ)
     device = KernelAbstractions.get_backend(res)
     kernel = bratu_kernel!(device)
-    kernel(res, y, Δx, λ, ndrange=length(res))
+    kernel(res, y, Δx, λ, ndrange = length(res))
+    return nothing
 end
 
 function bratu(y, dx, λ)
