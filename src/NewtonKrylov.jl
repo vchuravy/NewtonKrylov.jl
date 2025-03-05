@@ -89,7 +89,22 @@ end
 ##
 import Base: @kwdef
 
+"""
+    Forcing
+
+Implements forcing for inexact Newton-Krylov.
+The equation ``‖F′(u)d + F(u)‖ <= η * ‖F(u)‖`` gives
+the inexact Newton termination criterion.
+
+## Implemented variants
+- [`Fixed`](@ref)
+- [`EisenstatWalker`](@ref)
+"""
 abstract type Forcing end
+
+"""
+    Fixed(η = 0.1)
+"""
 @kwdef struct Fixed <: Forcing
     η::Float64 = 0.1
 end
@@ -99,6 +114,9 @@ function (F::Fixed)(args...)
 end
 inital(F::Fixed) = F.η
 
+"""
+    EisenstatWalker(η_max = 0.999, γ = 0.9)
+"""
 @kwdef struct EisenstatWalker <: Forcing
     η_max::Float64 = 0.999
     γ::Float64 = 0.9
@@ -121,11 +139,44 @@ function (F::EisenstatWalker)(η, tol, n_res, n_res_prior)
 end
 inital(F::EisenstatWalker) = F.η_max
 
+const KWARGS_DOCS = """
+## Keyword Arguments
+  - `tol_rel`: Relative tolerance
+  - `tol_abs`: Absolute tolerance
+  - `max_niter`: Maximum number of iterations
+  - `forcing`: Maximum forcing term for inexact Newton.
+             If `nothing` an exact Newton method is used.  
+  - `verbose`:
+  - `Solver`:
+  - `M`:
+  - `N`:
+  - `krylov_kwarg`
+  - `callback`:
+"""
+
+"""
+    newton_krylov(F, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
+
+## Arguments
+  - `F`: `res = F(u₀)` solves `res = F(u₀) = 0`
+  - `u₀`: Initial guess
+  - `M`: Length of the output of `F`. Defaults to `length(u₀)`.
+  
+$(KWARGS_DOCS)
+"""
 function newton_krylov(F, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
     F!(res, u) = (res .= F(u); nothing)
     return newton_krylov!(F!, u₀, M; kwargs...)
 end
 
+"""
+## Arguments
+  - `F!`: `F!(res, u)` solves `res = F(u) = 0`
+  - `u₀`: Initial guess
+  - `M`: Length of  the output of `F!`. Defaults to `length(u₀)`
+
+$(KWARGS_DOCS)
+"""
 function newton_krylov!(F!, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
     return newton_krylov!(F!, u₀, res; kwargs...)
@@ -148,12 +199,8 @@ end
   - `F!`: `F!(res, u)` solves `res = F(u) = 0`
   - `u`: Initial guess
   - `res`: Temporary for residual
-## Keyword Arguments
-  - `tol_rel`: Relative tolerance
-  - `tol_abs`: Absolute tolerance
-  - `max_niter`: Maximum number of iterations
-  - `forcing`: Maximum forcing term for inexact Newton.
-             If `nothing` an exact Newton method is used.   
+ 
+$(KWARGS_DOCS)
 """
 function newton_krylov!(
         F!, u::AbstractArray, res::AbstractArray;
