@@ -42,7 +42,7 @@ function mul!(out, J::JacobianOperator, v)
     # Enzyme.make_zero!(J.f_cache)
     f_cache = Enzyme.make_zero(J.f) # Stop gap until we can zero out mutable values
     autodiff(
-        Forward,
+        Enzyme.set_runtime_activity(Forward),
         maybe_duplicated(J.f, f_cache), Const,
         DuplicatedNoNeed(J.res, reshape(out, size(J.res))),
         DuplicatedNoNeed(J.u, reshape(v, size(J.u)))

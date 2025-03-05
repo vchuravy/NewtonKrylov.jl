@@ -111,3 +111,35 @@ Enzyme.autodiff(
     Enzyme.Duplicated(p, tmp2),
     Enzyme.Const(t)
 )
+
+using NewtonKrylov
+
+function G_Euler!(res, f!, du, u, uₙ, t, Δt, p)
+    f!(du, u, p, t)
+    return res .= uₙ .+ Δt .* du .- u
+end
+
+function solve!(ode)
+    if DiffEqBase.isinplace(ode)
+        f = ode.f
+    else
+        f = (du, u, p, t) -> (du .= ode.f(u, p, t); nothing)
+    end
+
+    Δt = 0.1
+    uₙ = ode.u0
+    t = first(ode.tspan)
+    du = similar(ode.u0)
+    res = similar(ode.u0)
+
+    F!(res, u) = G_Euler!(res, f, du, u, uₙ, t, Δt, p)
+
+    while t <= last(ode.tspan)
+        u, stats = newton_krylov!(F!, copy(uₙ), res)
+        @show stats
+        uₙ .= u
+    end
+    return uₙ
+end
+
+solve!(ode)
