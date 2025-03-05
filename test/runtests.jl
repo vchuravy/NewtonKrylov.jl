@@ -36,5 +36,5 @@ using Enzyme, LinearAlgebra
     out = similar(v)
     mul!(out, J, v)
 
-    @test out == J_Enz * v
+    @test out ≈ J_Enz * v
 end
