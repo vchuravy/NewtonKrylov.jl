@@ -19,6 +19,11 @@ function maybe_duplicated(f, df)
     end
 end
 
+"""
+    JacobianOperator
+
+Efficient implementation of `J(f,x) * v` and `v * J(f, x)'`
+"""
 struct JacobianOperator{F, A}
     f::F # F!(res, u)
     f_cache::F
