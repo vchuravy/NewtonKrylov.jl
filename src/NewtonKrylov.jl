@@ -315,16 +315,46 @@ function newton_krylov!(
     return u, (; solved = n_res <= tol, stats, t)
 end
 
+"""
+    halley_krylov(F, u₀::AbstractArray, M::Int = length(u₀))
+
+## Arguments
+  - `F`: `F(u)` solves `res = F(u) = 0`
+  - `u`: Initial guess
+  - `M`: Length of the output of `F`. Defaults to `length(u₀)`.
+ 
+$(KWARGS_DOCS)
+"""
 function halley_krylov(F, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
     F!(res, u) = (res .= F(u); nothing)
     return halley_krylov!(F!, u₀, M; kwargs...)
 end
 
+"""
+    halley_krylov!(F!, u₀::AbstractArray, M::Int = length(u₀))
+
+## Arguments
+  - `F!`: `F!(res, u)` solves `res = F(u) = 0`
+  - `u`: Initial guess
+  - `M`: Length of the output of `F!`. Defaults to `length(u₀)`.
+ 
+$(KWARGS_DOCS)
+"""
 function halley_krylov!(F!, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
     return halley_krylov!(F!, u₀, res; kwargs...)
 end
 
+"""
+    halley_krylov!(F!, u::AbstractArray, res::AbstractArray)
+
+## Arguments
+  - `F!`: `F!(res, u)` solves `res = F(u) = 0`
+  - `u`: Initial guess
+  - `res`: Temporary for residual
+ 
+$(KWARGS_DOCS)
+"""
 function halley_krylov!(
         F!, u::AbstractArray, res::AbstractArray;
         tol_rel = 1.0e-6,

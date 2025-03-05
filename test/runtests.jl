@@ -58,6 +58,8 @@ end
     @test jvp ≈ J_Enz * v
 end
 
+import NewtonKrylov: HessianOperator
+
 # Differentiate F with respect to x twice.
 function ddf(x, a)
     return autodiff(Forward, df, DuplicatedNoNeed(x, a), Const(a)) |> first
