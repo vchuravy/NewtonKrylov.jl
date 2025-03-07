@@ -29,16 +29,19 @@ struct JacobianOperator{F, A}
     f_cache::F
     res::A
     u::A
-    function JacobianOperator(f::F, res, u) where {F}
+    symmetric::Union{Bool,Missing}
+    function JacobianOperator(f::F, res, u; symmetric=missing) where {F}
         f_cache = Enzyme.make_zero(f)
-        return new{F, typeof(u)}(f, f_cache, res, u)
+        return new{F, typeof(u)}(f, f_cache, res, u, symmetric, hermetian)
     end
 end
 
 Base.size(J::JacobianOperator) = (length(J.res), length(J.u))
 Base.eltype(J::JacobianOperator) = eltype(J.u)
 
-function mul!(out, J::JacobianOperator, v)
+LinearAlgebra.issymmetric(J::JacobianOperator) = J.symmetric
+
+function mul!(out::A, J::JacobianOperator{F,A}, v::A) where {F, A}
     # Enzyme.make_zero!(J.f_cache)
     f_cache = Enzyme.make_zero(J.f) # Stop gap until we can zero out mutable values
     autodiff(
@@ -48,6 +51,14 @@ function mul!(out, J::JacobianOperator, v)
         DuplicatedNoNeed(J.u, reshape(v, size(J.u)))
     )
     return nothing
+end
+
+function mul!(out, J::JacobianOperator, v)
+    _v = similar(J.u)
+    _v .= v
+    _out = similar(J.res)
+    mul!(_out, J, _v)
+    out .= _out
 end
 
 LinearAlgebra.adjoint(J::JacobianOperator) = Adjoint(J)
