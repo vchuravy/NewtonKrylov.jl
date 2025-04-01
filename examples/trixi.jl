@@ -135,11 +135,19 @@ function solve!(ode)
     F!(res, u) = G_Euler!(res, f, du, u, uₙ, t, Δt, p)
 
     while t <= last(ode.tspan)
-        u, stats = newton_krylov!(F!, copy(uₙ), res)
+        u, stats = newton_krylov!(F!, copy(uₙ), res; max_niter = 500)
         @show stats
+        if !stats.solved
+            error("Newton-Krylov didn't converge")
+        end
         uₙ .= u
+        t += Δt
+        @show t
     end
     return uₙ
 end
 
 solve!(ode)
+
+
+# TODO: Jacobian w.r.t parameters
