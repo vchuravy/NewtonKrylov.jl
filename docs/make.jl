@@ -22,6 +22,7 @@ examples = [
     "Simple" => "simple",
     "BVP" => "bvp",
     "Implicit" => "implicit_timedependent",
+    "Trixi" => "trixi",
 ]
 
 for (_, name) in examples
