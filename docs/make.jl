@@ -17,9 +17,11 @@ const EXAMPLES_DIR = joinpath(@__DIR__, "..", "examples")
 const OUTPUT_DIR = joinpath(@__DIR__, "src/generated")
 
 examples = [
-    "Bratu 1D" => "bratu",
+    "Bratu -- 1D" => "bratu",
+    "Bratu -- KernelAbstractions" => "bratu_ka",
     "Simple" => "simple",
     "BVP" => "bvp",
+    "Implicit" => "implicit_timedependent",
 ]
 
 for (_, name) in examples
