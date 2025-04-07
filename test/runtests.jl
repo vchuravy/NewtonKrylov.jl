@@ -28,6 +28,19 @@ using Enzyme, LinearAlgebra
 @testset "Jacobian" begin
     J_Enz = jacobian(Forward, F, [3.0, 5.0]) |> only
     J = JacobianOperator(F!, zeros(2), [3.0, 5.0])
+
+    @test size(J) == (2, 2)
+    @test length(J) == 4
+    @test eltype(J) == Float64
+
+    out = [NaN, NaN]
+    mul!(out, J, [1.0, 0.0])
+    @test out == [6.0, 7.38905609893065]
+
+    out = [NaN, NaN]
+    mul!(out, transpose(J), [1.0, 0.0])
+    @test out == [6.0, 10.0]
+
     J_NK = collect(J)
 
     @test J_NK == J_Enz
@@ -37,4 +50,6 @@ using Enzyme, LinearAlgebra
     mul!(out, J, v)
 
     @test out ≈ J_Enz * v
+
+    @test collect(transpose(J)) == transpose(collect(J))
 end

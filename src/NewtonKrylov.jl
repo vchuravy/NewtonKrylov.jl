@@ -13,7 +13,7 @@ import LinearAlgebra: mul!
 
 function maybe_duplicated(f, df)
     if !Enzyme.Compiler.guaranteed_const(typeof(f))
-        return DuplicatedNoNeed(f, df)
+        return Duplicated(f, df)
     else
         return Const(f)
     end
@@ -37,6 +37,7 @@ end
 
 Base.size(J::JacobianOperator) = (length(J.res), length(J.u))
 Base.eltype(J::JacobianOperator) = eltype(J.u)
+Base.length(J::JacobianOperator) = prod(size(J))
 
 function mul!(out, J::JacobianOperator, v)
     # Enzyme.make_zero!(J.f_cache)
@@ -44,8 +45,8 @@ function mul!(out, J::JacobianOperator, v)
     autodiff(
         Forward,
         maybe_duplicated(J.f, f_cache), Const,
-        DuplicatedNoNeed(J.res, reshape(out, size(J.res))),
-        DuplicatedNoNeed(J.u, reshape(v, size(J.u)))
+        Duplicated(J.res, reshape(out, size(J.res))),
+        Duplicated(J.u, reshape(v, size(J.u)))
     )
     return nothing
 end
@@ -61,16 +62,18 @@ function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:A
     Enzyme.make_zero!(J.f_cache)
     # TODO: provide cache for `copy(v)`
     # Enzyme zeros input derivatives and that confuses the solvers.
+    # If `out` is non-zero we might get spurious gradients
+    fill!(out, 0)
     autodiff(
         Reverse,
         maybe_duplicated(J.f, J.f_cache), Const,
-        DuplicatedNoNeed(J.res, reshape(copy(v), size(J.res))),
-        DuplicatedNoNeed(J.u, reshape(out, size(J.u)))
+        Duplicated(J.res, reshape(copy(v), size(J.res))),
+        Duplicated(J.u, reshape(out, size(J.u)))
     )
     return nothing
 end
 
-function Base.collect(JOp::JacobianOperator)
+function Base.collect(JOp::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}, JacobianOperator})
     N, M = size(JOp)
     v = zeros(eltype(JOp), M)
     out = zeros(eltype(JOp), N)
