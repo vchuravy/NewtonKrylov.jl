@@ -65,15 +65,15 @@ end
 function mul!(Out::AbstractMatrix, J::JacobianOperator, V::AbstractMatrix)
     @assert size(Out, 2) == size(V, 2)
     out = tuple_of_vectors(Out, size(J.res))
-    v = tuple_of_vectors(v, size(J.u))
+    v = tuple_of_vectors(V, size(J.u))
 
     # f_cache = Enzyme.make_zero(J.f)
-    # TODO: BatchDuplicatedNoNeed for J.f
+    # TODO: BatchDuplicated for J.f
     autodiff(
         Forward,
         Const(J.f), Const,
-        BatchDuplicatedNoNeed(J.res, out),
-        BatchDuplicatedNoNeed(J.u, v)
+        BatchDuplicated(J.res, out),
+        BatchDuplicated(J.u, v)
     )
     return nothing
 end
@@ -84,7 +84,7 @@ LinearAlgebra.transpose(J::JacobianOperator) = Transpose(J)
 # Jᵀ(y, u) = ForwardDiff.gradient!(y, x -> dot(F(x), u), xk)
 # or just reverse mode
 
-function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}}, v)
+function mul!(out::AbstractVector, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}}, v::AbstractVector)
     J = parent(J′)
     Enzyme.make_zero!(J.f_cache)
     # TODO: provide cache for `copy(v)`
@@ -96,6 +96,30 @@ function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:A
         maybe_duplicated(J.f, J.f_cache), Const,
         Duplicated(J.res, reshape(copy(v), size(J.res))),
         Duplicated(J.u, reshape(out, size(J.u)))
+    )
+    return nothing
+end
+
+function mul!(Out::AbstractMatrix, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}}, V::AbstractMatrix)
+    J = parent(J′)
+    @assert size(Out, 2) == size(V, 2)
+
+    # If `out` is non-zero we might get spurious gradients
+    fill!(Out, 0)
+
+    # TODO: provide cache for `copy(v)`
+    # Enzyme zeros input derivatives and that confuses the solvers.
+    V = copy(V)
+
+    out = tuple_of_vectors(Out, size(J.u))
+    v = tuple_of_vectors(V, size(J.res))
+
+    # TODO: BatchDuplicated for J.f
+    autodiff(
+        Reverse,
+        Const(J.f), Const,
+        BatchDuplicated(J.res, v),
+        BatchDuplicated(J.u, out)
     )
     return nothing
 end
