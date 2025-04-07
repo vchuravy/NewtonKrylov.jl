@@ -13,7 +13,7 @@ import LinearAlgebra: mul!
 
 function maybe_duplicated(f)
     if !Enzyme.Compiler.guaranteed_const(typeof(f))
-        return Duplicated(f, Enzyme.make_zero(J.f)) # TODO cache?
+        return Duplicated(f, Enzyme.make_zero(f)) # TODO cache?
     else
         return Const(f)
     end
