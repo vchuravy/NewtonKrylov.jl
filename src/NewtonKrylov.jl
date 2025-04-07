@@ -11,9 +11,9 @@ using Enzyme
 ##
 import LinearAlgebra: mul!
 
-function maybe_duplicated(f, df)
+function maybe_duplicated(f)
     if !Enzyme.Compiler.guaranteed_const(typeof(f))
-        return Duplicated(f, df)
+        return Duplicated(f, Enzyme.make_zero(J.f)) # TODO cache?
     else
         return Const(f)
     end
@@ -24,16 +24,15 @@ end
 """
     JacobianOperator
 
-Efficient implementation of `J(f,x) * v` and `v * J(f, x)'`
+Efficient implementation of `J(f,x,p) * v` and `v * J(f, x,p)'`
 """
-struct JacobianOperator{F, A}
-    f::F # F!(res, u)
-    f_cache::F
+struct JacobianOperator{F, A, P}
+    f::F # F!(res, u, p)
     res::A
     u::A
-    function JacobianOperator(f::F, res, u) where {F}
-        f_cache = Enzyme.make_zero(f)
-        return new{F, typeof(u)}(f, f_cache, res, u)
+    p::P
+    function JacobianOperator(f::F, res, u, p) where {F}
+        return new{F, typeof(u), typeof(p)}(f, res, u, p)
     end
 end
 
@@ -42,13 +41,12 @@ Base.eltype(J::JacobianOperator) = eltype(J.u)
 Base.length(J::JacobianOperator) = prod(size(J))
 
 function mul!(out::AbstractVector, J::JacobianOperator, v::AbstractVector)
-    # Enzyme.make_zero!(J.f_cache)
-    f_cache = Enzyme.make_zero(J.f) # Stop gap until we can zero out mutable values
     autodiff(
         Forward,
-        maybe_duplicated(J.f, f_cache), Const,
+        maybe_duplicated(J.f), Const,
         Duplicated(J.res, reshape(out, size(J.res))),
-        Duplicated(J.u, reshape(v, size(J.u)))
+        Duplicated(J.u, reshape(v, size(J.u))),
+        maybe_duplicated(J.p)
     )
     return nothing
 end
@@ -224,28 +222,28 @@ const KWARGS_DOCS = """
     newton_krylov(F, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
 
 ## Arguments
-  - `F`: `res = F(u₀)` solves `res = F(u₀) = 0`
+  - `F`: `res = F(u₀, p)` solves `res = F(u₀) = 0`
   - `u₀`: Initial guess
   - `M`: Length of the output of `F`. Defaults to `length(u₀)`.
   
 $(KWARGS_DOCS)
 """
-function newton_krylov(F, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
-    F!(res, u) = (res .= F(u); nothing)
-    return newton_krylov!(F!, u₀, M; kwargs...)
+function newton_krylov(F, u₀::AbstractArray, p, M::Int = length(u₀); kwargs...)
+    F!(res, u, p) = (res .= F(u, p); nothing)
+    return newton_krylov!(F!, u₀, p, M; kwargs...)
 end
 
 """
 ## Arguments
-  - `F!`: `F!(res, u)` solves `res = F(u) = 0`
+  - `F!`: `F!(res, u, p)` solves `res = F(u) = 0`
   - `u₀`: Initial guess
   - `M`: Length of  the output of `F!`. Defaults to `length(u₀)`
 
 $(KWARGS_DOCS)
 """
-function newton_krylov!(F!, u₀::AbstractArray, M::Int = length(u₀); kwargs...)
+function newton_krylov!(F!, u₀::AbstractArray, p, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
-    return newton_krylov!(F!, u₀, res; kwargs...)
+    return newton_krylov!(F!, u₀, p, res; kwargs...)
 end
 
 struct Stats
@@ -262,14 +260,14 @@ end
 """
 
 ## Arguments
-  - `F!`: `F!(res, u)` solves `res = F(u) = 0`
+  - `F!`: `F!(res, u, p)` solves `res = F(u) = 0`
   - `u`: Initial guess
   - `res`: Temporary for residual
  
 $(KWARGS_DOCS)
 """
 function newton_krylov!(
-        F!, u::AbstractArray, res::AbstractArray;
+        F!, u::AbstractArray, p, res::AbstractArray;
         tol_rel = 1.0e-6,
         tol_abs = 1.0e-12,
         max_niter = 50,
@@ -282,7 +280,7 @@ function newton_krylov!(
         callback = (args...) -> nothing,
     )
     t₀ = time_ns()
-    F!(res, u) # res = F(u)
+    F!(res, u, p) # res = F(u)
     n_res = norm(res)
     callback(u, res, n_res)
 
@@ -294,7 +292,7 @@ function newton_krylov!(
 
     verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀ = n_res tol tol_rel tol_abs η
 
-    J = JacobianOperator(F!, res, u)
+    J = JacobianOperator(F!, res, u, p)
     solver = Solver(J, res)
 
     stats = Stats(0, 0)
@@ -326,7 +324,7 @@ function newton_krylov!(
         # Update residual and norm
         n_res_prior = n_res
 
-        F!(res, u) # res = F(u)
+        F!(res, u, p) # res = F(u)
         n_res = norm(res)
         callback(u, res, n_res)
 
