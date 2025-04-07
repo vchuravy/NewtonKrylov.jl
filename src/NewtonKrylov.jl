@@ -19,6 +19,9 @@ function maybe_duplicated(f, df)
     end
 end
 
+# TODO: JacobianOperator with thunk
+# TODO: JacobianOperator with batched/vector
+
 """
     JacobianOperator
 
@@ -39,7 +42,7 @@ Base.size(J::JacobianOperator) = (length(J.res), length(J.u))
 Base.eltype(J::JacobianOperator) = eltype(J.u)
 Base.length(J::JacobianOperator) = prod(size(J))
 
-function mul!(out, J::JacobianOperator, v)
+function mul!(out::AbstractVector, J::JacobianOperator, v::AbstractVector)
     # Enzyme.make_zero!(J.f_cache)
     f_cache = Enzyme.make_zero(J.f) # Stop gap until we can zero out mutable values
     autodiff(
@@ -47,6 +50,30 @@ function mul!(out, J::JacobianOperator, v)
         maybe_duplicated(J.f, f_cache), Const,
         Duplicated(J.res, reshape(out, size(J.res))),
         Duplicated(J.u, reshape(v, size(J.u)))
+    )
+    return nothing
+end
+
+function tuple_of_vectors(M::Matrix{T}, shape) where {T}
+    n, m = size(M)
+    return ntuple(m) do i
+        vec = Base.wrap(Array, memoryref(M.ref, (i - 1) * n + 1), (n,))
+        reshape(vec, shape)
+    end
+end
+
+function mul!(Out::AbstractMatrix, J::JacobianOperator, V::AbstractMatrix)
+    @assert size(Out, 2) == size(V, 2)
+    out = tuple_of_vectors(Out, size(J.res))
+    v = tuple_of_vectors(v, size(J.u))
+
+    # f_cache = Enzyme.make_zero(J.f)
+    # TODO: BatchDuplicatedNoNeed for J.f
+    autodiff(
+        Forward,
+        Const(J.f), Const,
+        BatchDuplicatedNoNeed(J.res, out),
+        BatchDuplicatedNoNeed(J.u, v)
     )
     return nothing
 end
