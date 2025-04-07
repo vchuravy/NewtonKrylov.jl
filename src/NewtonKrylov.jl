@@ -37,6 +37,7 @@ end
 
 Base.size(J::JacobianOperator) = (length(J.res), length(J.u))
 Base.eltype(J::JacobianOperator) = eltype(J.u)
+Base.length(J::JacobianOperator) = prod(size(J))
 
 function mul!(out, J::JacobianOperator, v)
     # Enzyme.make_zero!(J.f_cache)
@@ -61,6 +62,8 @@ function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:A
     Enzyme.make_zero!(J.f_cache)
     # TODO: provide cache for `copy(v)`
     # Enzyme zeros input derivatives and that confuses the solvers.
+    # If `out` is non-zero we might get spurious gradients
+    fill!(out, 0)
     autodiff(
         Reverse,
         maybe_duplicated(J.f, J.f_cache), Const,
@@ -70,7 +73,7 @@ function mul!(out, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:A
     return nothing
 end
 
-function Base.collect(JOp::JacobianOperator)
+function Base.collect(JOp::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}, JacobianOperator})
     N, M = size(JOp)
     v = zeros(eltype(JOp), M)
     out = zeros(eltype(JOp), N)
