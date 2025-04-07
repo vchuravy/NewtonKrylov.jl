@@ -337,6 +337,12 @@ function newton_krylov!(
             η = forcing(η, tol, n_res, n_res_prior)
         end
 
+        # TODO: What to do when EisenstatWalker Krylov decides we are "close" enough and we don't have an inner iteration
+        if solver.stats.niter == 0
+            @error "Inexact Newton thinks we are close enough"
+            break
+        end
+
         verbose > 0 && @info "Newton" iter = n_res η stats
         stats = update(stats, solver.stats.niter)
     end
