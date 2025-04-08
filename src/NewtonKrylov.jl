@@ -20,7 +20,6 @@ function maybe_duplicated(f, df)
 end
 
 # TODO: JacobianOperator with thunk
-# TODO: JacobianOperator with batched/vector
 
 """
     JacobianOperator
