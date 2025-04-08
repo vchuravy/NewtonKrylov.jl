@@ -52,4 +52,16 @@ using Enzyme, LinearAlgebra
     @test out ≈ J_Enz * v
 
     @test collect(transpose(J)) == transpose(collect(J))
+
+    # Batched
+    if VERSION >= v"1.11.0"
+        V = [1.0 0.0; 0.0 1.0]
+        Out = similar(V)
+        mul!(Out, J, V)
+
+        @test Out == J_Enz
+
+        mul!(Out, transpose(J), V)
+        @test Out == collect(transpose(J))
+    end
 end
