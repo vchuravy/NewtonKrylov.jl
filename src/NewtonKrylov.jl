@@ -163,11 +163,12 @@ const KWARGS_DOCS = """
 ## Arguments
   - `F`: `res = F(u₀, p)` solves `res = F(u₀) = 0`
   - `u₀`: Initial guess
+  - `p`: Parameters
   - `M`: Length of the output of `F`. Defaults to `length(u₀)`.
   
 $(KWARGS_DOCS)
 """
-function newton_krylov(F, u₀::AbstractArray, p, M::Int = length(u₀); kwargs...)
+function newton_krylov(F, u₀::AbstractArray, p = nothing, M::Int = length(u₀); kwargs...)
     F!(res, u, p) = (res .= F(u, p); nothing)
     return newton_krylov!(F!, u₀, p, M; kwargs...)
 end
@@ -176,11 +177,12 @@ end
 ## Arguments
   - `F!`: `F!(res, u, p)` solves `res = F(u) = 0`
   - `u₀`: Initial guess
+  - `p`: Parameters
   - `M`: Length of  the output of `F!`. Defaults to `length(u₀)`
 
 $(KWARGS_DOCS)
 """
-function newton_krylov!(F!, u₀::AbstractArray, p, M::Int = length(u₀); kwargs...)
+function newton_krylov!(F!, u₀::AbstractArray, p = nothing, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
     return newton_krylov!(F!, u₀, p, res; kwargs...)
 end
@@ -201,6 +203,7 @@ end
 ## Arguments
   - `F!`: `F!(res, u, p)` solves `res = F(u) = 0`
   - `u`: Initial guess
+  - `p`: 
   - `res`: Temporary for residual
  
 $(KWARGS_DOCS)

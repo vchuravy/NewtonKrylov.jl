@@ -56,8 +56,8 @@ function implicit_spring(G! = G_Euler!)
         if t == t₀
             continue
         end
-        F!(res, y) = G!(res, (y, t) -> f(y, t, γ), y, yₙ, t, Δt)
-        y, _ = newton_krylov!(F!, copy(yₙ))
+        F!(res, y, (yₙ, t, Δt)) = G!(res, (y, t) -> f(y, t, γ), y, yₙ, t, Δt)
+        y, _ = newton_krylov!(F!, copy(yₙ), (yₙ, t, Δt))
         push!(hist, y)
         yₙ .= y
     end
