@@ -10,7 +10,7 @@ using KernelAbstractions
 # ## 1D Bratu equations
 # $y′′ + λ * exp(y) = 0$
 
-@kernel function bratu_kernel!(res, y, Δx, λ)
+@kernel function bratu_kernel!(res, y, (Δx, λ))
     i = @index(Global, Linear)
     N = length(res)
     y_l = i == 1 ? zero(eltype(y)) : y[i - 1]
@@ -20,16 +20,16 @@ using KernelAbstractions
     res[i] = y′′ + λ * exp(y[i]) # = 0
 end
 
-function bratu!(res, y, Δx, λ)
+function bratu!(res, y, p)
     device = KernelAbstractions.get_backend(res)
     kernel = bratu_kernel!(device)
-    kernel(res, y, Δx, λ, ndrange = length(res))
+    kernel(res, y, p, ndrange = length(res))
     return nothing
 end
 
-function bratu(y, dx, λ)
+function bratu(y, p)
     res = similar(y)
-    bratu!(res, y, dx, λ)
+    bratu!(res, y, p)
     return res
 end
 
@@ -61,8 +61,8 @@ fig
 
 # ## Solving using inplace variant and CG
 uₖ, _ = newton_krylov!(
-    (res, u) -> bratu!(res, u, dx, λ),
-    copy(u₀), similar(u₀);
+    bratu!,
+    copy(u₀), (dx, λ), similar(u₀);
     Solver = CgSolver,
 )
 

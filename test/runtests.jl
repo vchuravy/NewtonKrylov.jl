@@ -1,14 +1,14 @@
 using Test
 using NewtonKrylov
 
-function F!(res, x)
+function F!(res, x, _)
     res[1] = x[1]^2 + x[2]^2 - 2
     return res[2] = exp(x[1] - 1) + x[2]^2 - 2
 end
 
-function F(x)
+function F(x, p)
     res = similar(x)
-    F!(res, x)
+    F!(res, x, p)
     return res
 end
 
@@ -26,8 +26,8 @@ import NewtonKrylov: JacobianOperator
 using Enzyme, LinearAlgebra
 
 @testset "Jacobian" begin
-    J_Enz = jacobian(Forward, F, [3.0, 5.0]) |> only
-    J = JacobianOperator(F!, zeros(2), [3.0, 5.0])
+    J_Enz = jacobian(Forward, x -> F(x, nothing), [3.0, 5.0]) |> only
+    J = JacobianOperator(F!, zeros(2), [3.0, 5.0], nothing)
 
     @test size(J) == (2, 2)
     @test length(J) == 4

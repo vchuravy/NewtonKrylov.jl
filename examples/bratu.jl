@@ -11,7 +11,7 @@ using CairoMakie
 
 # F(u) = 0
 
-function bratu!(res, y, Δx, λ)
+function bratu!(res, y, (Δx, λ))
     N = length(y)
     for i in 1:N
         y_l = i == 1 ? zero(eltype(y)) : y[i - 1]
@@ -23,9 +23,9 @@ function bratu!(res, y, Δx, λ)
     return nothing
 end
 
-function bratu(y, dx, λ)
+function bratu(y, p)
     res = similar(y)
-    bratu!(res, y, dx, λ)
+    bratu!(res, y, p)
     return res
 end
 
@@ -57,8 +57,8 @@ fig
 
 # ## Solving using inplace variant and CG
 uₖ, _ = newton_krylov!(
-    (res, u) -> bratu!(res, u, dx, λ),
-    copy(u₀), similar(u₀);
+    bratu!,
+    copy(u₀), (dx, λ), similar(u₀);
     Solver = CgSolver,
 )
 
@@ -83,16 +83,16 @@ end
 # ## Solving using the out of place variant
 
 _, stats = newton_krylov(
-    (u) -> bratu(u, dx, λ),
-    copy(u₀);
+    bratu,
+    copy(u₀), (dx, λ);
     Solver = CgSolver
 )
 stats
 
 # ## Solving with a fixed forcing
 _, stats = newton_krylov!(
-    (res, u) -> bratu!(res, u, dx, λ),
-    copy(u₀), similar(u₀);
+    bratu!,
+    copy(u₀), (dx, λ), similar(u₀);
     Solver = CgSolver,
     forcing = NewtonKrylov.Fixed(0.1)
 )
@@ -100,8 +100,8 @@ stats
 
 # ## Solving with no forcing
 _, stats = newton_krylov!(
-    (res, u) -> bratu!(res, u, dx, λ),
-    copy(u₀), similar(u₀);
+    bratu!,
+    copy(u₀), (dx, λ), similar(u₀);
     Solver = CgSolver,
     forcing = nothing
 )
@@ -110,8 +110,8 @@ stats
 # ## Solve using GMRES -- doesn't converge
 # ```julia
 # _, stats = newton_krylov!(
-#     (res, u) -> bratu!(res, u, dx, λ),
-#     copy(u₀), similar(u₀);
+#     bratu!,
+#     copy(u₀), (dx, λ), similar(u₀);
 #     Solver = GmresSolver,
 # )
 # stats
@@ -119,8 +119,8 @@ stats
 
 # ## Solve using GMRES + ILU Preconditoner
 _, stats = newton_krylov!(
-    (res, u) -> bratu!(res, u, dx, λ),
-    copy(u₀), similar(u₀);
+    bratu!,
+    copy(u₀), (dx, λ), similar(u₀);
     Solver = GmresSolver,
     N = (J) -> ilu(collect(J)), # Assembles the full Jacobian
     krylov_kwargs = (; ldiv = true)
@@ -129,8 +129,8 @@ stats
 
 # ## Solve using FGMRES + ILU Preconditoner
 _, stats = newton_krylov!(
-    (res, u) -> bratu!(res, u, dx, λ),
-    copy(u₀), similar(u₀);
+    bratu!,
+    copy(u₀), (dx, λ), similar(u₀);
     Solver = FgmresSolver,
     N = (J) -> ilu(collect(J)), # Assembles the full Jacobian
     krylov_kwargs = (; ldiv = true)
@@ -149,8 +149,8 @@ function LinearAlgebra.mul!(y, P::GmresPreconditioner, x)
 end
 
 _, stats = newton_krylov!(
-    (res, u) -> bratu!(res, u, dx, λ),
-    copy(u₀), similar(u₀);
+    bratu!,
+    copy(u₀), (dx, λ), similar(u₀);
     Solver = FgmresSolver,
     N = (J) -> GmresPreconditioner(J, 5),
 )
@@ -159,8 +159,8 @@ stats
 # ## Explodes..
 # ```julia
 # newton_krylov!(
-# 	(res, u) -> bratu!(res, u, dx, λ),
-# 	copy(u₀), similar(u₀);
+# 	bratu!,
+# 	copy(u₀), (dx, λ), similar(u₀);
 # 	Solver = CglsSolver, # CgneSolver
 #   krylov_kwargs = (; verbose=1)
 # )
@@ -168,8 +168,8 @@ stats
 #
 # ```julia
 # newton_krylov!(
-# 	(res, u) -> bratu!(res, u, dx, λ),
-# 	copy(u₀), similar(u₀);
+# 	bratu!,
+# 	copy(u₀), (dx, λ), similar(u₀);
 # 	verbose = 1,
 # 	Solver = BicgstabSolver, # L=2
 # 	η_max = nothing
