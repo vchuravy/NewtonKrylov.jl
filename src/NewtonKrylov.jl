@@ -92,7 +92,6 @@ LinearAlgebra.transpose(J::JacobianOperator) = Transpose(J)
 
 function mul!(out::AbstractVector, J′::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}}, v::AbstractVector)
     J = parent(J′)
-    Enzyme.make_zero!(J.f_cache)
     # TODO: provide cache for `copy(v)`
     # Enzyme zeros input derivatives and that confuses the solvers.
     # If `out` is non-zero we might get spurious gradients
