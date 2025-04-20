@@ -7,7 +7,7 @@ function Phi(t, tdag, vp, v)
     return phi
 end
 
-function Fbvp!(res, U, force, tv, tvdag, h, n)
+function Fbvp!(res, U, (force, tv, tvdag, h, n))
     @assert 2n == length(U)
     res[1] = U[2]
     res[2n] = U[2n - 1]
@@ -50,10 +50,9 @@ function BVP_solve(n = 801, T = Float64)
     force = zeros(n)
 
     BVP_U0!(U0, n, tv)
-    F!(res, u) = Fbvp!(res, u, force, tv, tvdag, h, n)
 
     bvpout, stats = newton_krylov!(
-        F!, U0, res,
+        Fbvp!, U0, (force, tv, tvdag, h, n), res,
         Solver = FgmresSolver,
         N = (J) -> GmresPreconditioner(J, 30),
     )
