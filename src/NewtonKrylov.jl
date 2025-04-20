@@ -11,11 +11,16 @@ using Enzyme
 ##
 import LinearAlgebra: mul!
 
-function maybe_duplicated(f)
-    if !Enzyme.Compiler.guaranteed_const(typeof(f))
-        return Duplicated(f, Enzyme.make_zero(f)) # TODO cache?
+function maybe_duplicated(x, ::Val{N} = Val(1)) where {N}
+    # TODO cache?
+    if !Enzyme.Compiler.guaranteed_const(typeof(x))
+        if N == 1
+            return Duplicated(x, Enzyme.make_zero(x))
+        else
+            return BatchDuplicated(x, ntuple(_ -> Enzyme.make_zero(x), Val(N)))
+        end
     else
-        return Const(f)
+        return Const(x)
     end
 end
 
@@ -66,13 +71,13 @@ if VERSION >= v"1.11.0"
         out = tuple_of_vectors(Out, size(J.res))
         v = tuple_of_vectors(V, size(J.u))
 
-        # f_cache = Enzyme.make_zero(J.f)
-        # TODO: BatchDuplicated for J.f
+        N = length(out)
         autodiff(
             Forward,
-            Const(J.f), Const,
+            maybe_duplicated(J.f, Val(N)), Const,
             BatchDuplicated(J.res, out),
-            BatchDuplicated(J.u, v)
+            BatchDuplicated(J.u, v),
+            maybe_duplicated(J.p, Val(N))
         )
         return nothing
     end
@@ -94,9 +99,10 @@ function mul!(out::AbstractVector, J′::Union{Adjoint{<:Any, <:JacobianOperator
     fill!(out, 0)
     autodiff(
         Reverse,
-        maybe_duplicated(J.f, J.f_cache), Const,
+        maybe_duplicated(J.f), Const,
         Duplicated(J.res, reshape(copy(v), size(J.res))),
-        Duplicated(J.u, reshape(out, size(J.u)))
+        Duplicated(J.u, reshape(out, size(J.u))),
+        maybe_duplicated(J.p)
     )
     return nothing
 end
@@ -117,12 +123,15 @@ if VERSION >= v"1.11.0"
         out = tuple_of_vectors(Out, size(J.u))
         v = tuple_of_vectors(V, size(J.res))
 
+        N = length(out)
+
         # TODO: BatchDuplicated for J.f
         autodiff(
             Reverse,
-            Const(J.f), Const,
+            maybe_duplicated(J.f, Val(N)), Const,
             BatchDuplicated(J.res, v),
-            BatchDuplicated(J.u, out)
+            BatchDuplicated(J.u, out),
+            maybe_duplicated(J.p, Val(N))
         )
         return nothing
     end
