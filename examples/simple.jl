@@ -3,7 +3,7 @@
 using NewtonKrylov, LinearAlgebra
 using CairoMakie
 
-function F!(res, x, p)
+function F!(res, x, _)
     res[1] = x[1]^2 + x[2]^2 - 2
     return res[2] = exp(x[1] - 1) + x[2]^2 - 2
 end
