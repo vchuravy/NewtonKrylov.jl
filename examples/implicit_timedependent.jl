@@ -115,8 +115,8 @@ lines(fig[1, 2], ts_euler, x_euler, label = "Euler")
 lines(fig[2, 1], ts_midpoint, v_midpoint, label = "Midpoint")
 lines(fig[2, 2], ts_midpoint, x_midpoint, label = "Midpoint")
 
-lines(fig[3, 1], ts_trapezoid, v_trapezoid, label = "Midpoint")
-lines(fig[3, 2], ts_trapezoid, x_trapezoid, label = "Midpoint")
+lines(fig[3, 1], ts_trapezoid, v_trapezoid, label = "Trapezoid")
+lines(fig[3, 2], ts_trapezoid, x_trapezoid, label = "Trapezoid")
 
 fig
 
