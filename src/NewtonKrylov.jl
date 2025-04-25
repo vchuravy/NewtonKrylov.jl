@@ -139,8 +139,8 @@ end # VERSION >= v"1.11.0"
 
 function Base.collect(JOp::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}, JacobianOperator})
     N, M = size(JOp)
-    v = zeros(eltype(JOp), M)
-    out = zeros(eltype(JOp), N)
+    v = zero(JOp.u)
+    out = zero(JOp.res)
     J = SparseMatrixCSC{eltype(v), Int}(undef, size(JOp)...)
     for j in 1:M
         out .= 0.0
@@ -349,6 +349,7 @@ function newton_krylov!(
         end
 
         if forcing !== nothing
+            # prev_η = η
             η = forcing(η, tol, n_res, n_res_prior)
         end
 

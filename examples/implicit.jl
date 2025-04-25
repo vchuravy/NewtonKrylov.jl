@@ -1,6 +1,8 @@
 # # [Implicit schemes](@id implicit_schemes)
 using NewtonKrylov
 
+using NewtonKrylov
+
 # ## Implicit Euler
 
 function G_Euler!(res, uₙ, Δt, f!, du, u, p, t)
