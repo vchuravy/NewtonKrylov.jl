@@ -1,0 +1,71 @@
+# # Implicit schemes
+
+# ## Implicit Euler
+
+function G_Euler!(res, uₙ, Δt, f!, du, u, p, t)
+    f!(du, u, p, t)
+
+    res .= uₙ .+ Δt .* du .- u
+    return nothing
+end
+
+# ## Implicit Midpoint
+
+function G_Midpoint!(res, uₙ, Δt, f!, du, u, p, t)
+    # Use res for a temporary allocation (uₙ .+ u) ./ 2
+    uuₙ = res
+    uuₙ .= (uₙ .+ u) ./ 2
+    f!(du, uuₙ, p, t + Δt / 2)
+
+    res .= uₙ .+ Δt .* du .- u
+    return nothing
+end
+
+# ## Implicit Trapezoid
+
+function G_Trapezoid!(res, uₙ, Δt, f!, du, u, p, t)
+    # Use res as the temporary
+    duₙ = res
+    f!(duₙ, uₙ, p, t)
+    f!(du, u, p, t + Δt)
+
+    res .= uₙ .+ (Δt / 2) .* (duₙ .+ du) .- u
+    return nothing
+end
+
+# ## Jacobian of various G
+
+function jacobian(G!, f!, uₙ, p, Δt, t)
+    u = copy(uₙ)
+    du = similar(uₙ)
+    res = similar(uₙ)
+
+    F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
+
+    J = NewtonKrylov.JacobianOperator(F!, res, u, (uₙ, Δt, du, p, t))
+    return collect(J)
+end
+
+# ## Non-adaptive time stepping
+
+import Krylov
+
+function solve(G!, f!, uₙ, p, Δt, ts; callback = _ -> nothing, verbose = 0, Solver = Krylov.GmresSolver)
+    u = copy(uₙ)
+    du = similar(uₙ)
+    res = similar(uₙ)
+    F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
+
+    for t in ts
+        if t == first(ts)
+            continue
+        end
+        _, stats = newton_krylov!(F!, u, (uₙ, Δt, du, p, t), res; verbose, Solver)
+        callback(u)
+        uₙ .= u
+        if !stats.solved
+            @warn "non linear solve failed continuing" t stats
+        end
+    end
+    return uₙ
+end
