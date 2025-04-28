@@ -79,7 +79,6 @@ compare(1.0)
 
 compare(10.0)
 
-
 # ## Jacobian of implicit step
 
 # ### Implicit Euler

@@ -259,11 +259,13 @@ end
 struct Stats
     outer_iterations::Int
     inner_iterations::Int
+    n_res::Float64
 end
-function update(stats::Stats, inner_iterations)
+function update(stats::Stats, inner_iterations, n_res::Float64)
     return Stats(
         stats.outer_iterations + 1,
-        stats.inner_iterations + inner_iterations
+        stats.inner_iterations + inner_iterations,
+        n_res
     )
 end
 
@@ -280,7 +282,7 @@ $(KWARGS_DOCS)
 function newton_krylov!(
         F!, u::AbstractArray, p, res::AbstractArray;
         tol_rel = 1.0e-6,
-        tol_abs = 1.0e-12,
+        tol_abs = 1.0e-12, # Scipy uses 6e-6
         max_niter = 50,
         forcing::Union{Forcing, Nothing} = EisenstatWalker(),
         verbose = 0,
@@ -306,7 +308,7 @@ function newton_krylov!(
     J = JacobianOperator(F!, res, u, p)
     solver = Solver(J, res)
 
-    stats = Stats(0, 0)
+    stats = Stats(0, 0, n_res)
     while n_res > tol && stats.outer_iterations <= max_niter
         # Handle kwargs for Preconditoners
         kwargs = krylov_kwargs
@@ -345,21 +347,16 @@ function newton_krylov!(
         end
 
         if forcing !== nothing
-            # prev_η = η
             η = forcing(η, tol, n_res, n_res_prior)
         end
 
-        # if solver.stats.niter == 0 && forcing !== nothing
-        #     @info "Inexact Newton" prev_η η stats
-        #     if prev_η == η
-        #         @info "Inexact Newton got stuck, switching to exact" forcing stats
-        #         forcing = nothing
-        #     end
-        #     continue
-        # end
+        # This is almost to be expected for implicit time-stepping
+        if verbose > 0 && solver.stats.niter == 0 && forcing !== nothing
+            @info "Inexact Newton thinks our step is good enough " η stats
+        end
 
         verbose > 0 && @info "Newton" iter = n_res η stats
-        stats = update(stats, solver.stats.niter)
+        stats = update(stats, solver.stats.niter, n_res)
     end
     t = (time_ns() - t₀) / 1.0e9
     return u, (; solved = n_res <= tol, stats, t)
