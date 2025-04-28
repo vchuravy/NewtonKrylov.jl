@@ -12,7 +12,7 @@ end
 # ## Implicit Midpoint
 
 function G_Midpoint!(res, uₙ, Δt, f!, du, u, p, t)
-    # Use res for a temporary allocation (uₙ .+ u) ./ 2
+    ## Use res for a temporary allocation (uₙ .+ u) ./ 2
     uuₙ = res
     uuₙ .= (uₙ .+ u) ./ 2
     f!(du, uuₙ, p, t + Δt / 2)
@@ -24,7 +24,7 @@ end
 # ## Implicit Trapezoid
 
 function G_Trapezoid!(res, uₙ, Δt, f!, du, u, p, t)
-    # Use res as the temporary
+    ## Use res as the temporary
     duₙ = res
     f!(duₙ, uₙ, p, t)
     f!(du, u, p, t + Δt)
