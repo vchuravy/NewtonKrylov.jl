@@ -21,6 +21,8 @@ mesh = UniformPeriodicMesh1D(; xmin, xmax, Nx = elements)
 D1m = couple_discontinuously(D_local, mesh, Val(:minus))
 D1p = couple_discontinuously(D_local, mesh, Val(:plus))
 
+using SparseArrays
+
 D2 = sparse(D1m) * sparse(D1p)
 
 x = grid(D1m)
