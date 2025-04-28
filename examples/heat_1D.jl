@@ -37,6 +37,11 @@ function bc!(u)
     return u[end] = 0
 end
 
+function periodic_bc!(u)
+    u[1] = u[end - 1]
+    return u[end] = u[2]
+end
+
 # inital condition
 
 f(x) = 4x * (1 - x)
@@ -83,6 +88,10 @@ rank(J)
 # Condition number
 
 cond(Array(J))
+
+
+# ### Euler (Periodic boundary condition)
+J = jacobian(G_Euler!, heat_1D!, zeros(N), (a, 1 / (N + 1), periodic_bc!), 0.1, 0.0)
 
 
 function solve_heat_1D(G!, L, M, a, Δt, t_final, initial_condition, bc!)
