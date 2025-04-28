@@ -40,6 +40,7 @@ function heat_1D!(du, u, (D1m, D1p), t)
     # mul!(du, D1p, u)
 
     mul!(du, D1m, du1)
+    # mul!(du, D1m, u, 1, 1)
     return
 end
 
