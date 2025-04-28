@@ -9,7 +9,8 @@ include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl")
 # ## Heat 1D
 # $ \frac{\partial u(x, t)}{\partial t} = a * \frac{\partial^2 u(x, t)}{\partial x^2 $
 
-function heat_1D!(du, u, (a, Δx, bc!), t)
+function heat_1D!(du, u, p, t)
+    (a, Δx, bc!) = p
     N = length(u)
 
     # Enforce the boundary condition
