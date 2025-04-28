@@ -21,7 +21,9 @@ examples = [
     "Bratu -- KernelAbstractions" => "bratu_ka",
     "Simple" => "simple",
     "BVP" => "bvp",
-    "Implicit" => "implicit_timedependent",
+    "Implicit" => "implicit",
+    "Implicit -- Spring" => "spring",
+    "Implicit -- Heat 1D" => "heat_1D",
 ]
 
 for (_, name) in examples
