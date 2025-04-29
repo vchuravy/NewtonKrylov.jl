@@ -51,10 +51,6 @@ f(x) = 4x * (1 - x)
 using LinearAlgebra
 
 # ## Investigate the Jacobian's
-
-
-@show zero(x)
-
 J = jacobian(G_Euler!, heat_1D_v1!, zero(x), (D2,), 0.1, 0.0)
 
 
@@ -115,10 +111,16 @@ function plot_1D(xs, ts, hist)
 end
 
 Δt = 0.01
-t_final = 1.0
+t_final = 50.0
 xs, ts, hist = solve_heat_1D(G_Euler!, x, Δt, t_final, f, (D1m, D1p));
 
 lines(x, hist[end])
+
+euler = copy(hist[end])
+
+fig, ax = lines(x, hist[1])
+lines!(ax, x, hist[end])
+fig
 
 contour(xs, ts, stack(hist))
 plot_1D(xs, ts, hist)
@@ -127,6 +129,12 @@ xs, ts, hist = solve_heat_1D(G_Midpoint!, x, Δt, t_final, f, (D1m, D1p));
 
 lines(x, hist[end])
 
+mid = copy(hist[end])
+
+fig, ax = lines(x, hist[1])
+lines!(ax, x, hist[end])
+fig
+
 contour(xs, ts, stack(hist))
 plot_1D(xs, ts, hist)
 
@@ -134,5 +142,55 @@ xs, ts, hist = solve_heat_1D(G_Trapezoid!, x, Δt, t_final, f, (D1m, D1p));
 
 lines(x, hist[end])
 
+fig, ax = lines(x, hist[1])
+lines!(ax, x, hist[end])
+fig
+
 contour(xs, ts, stack(hist))
 plot_1D(xs, ts, hist)
+
+# ### Upwind operator
+
+nnodes = 120
+accuracy_order = 3
+D = upwind_operators(
+    periodic_derivative_operator;
+    accuracy_order, xmin, xmax, N = nnodes
+)
+D1m = D.minus
+D1p = D.plus
+
+x = grid(D1m)
+
+t_final
+xs, ts, hist = solve_heat_1D(G_Euler!, x, Δt, t_final, f, (D1m, D1p));
+
+lines(x, hist[end])
+
+fig, ax = lines(x, hist[1])
+lines!(ax, x, hist[end])
+fig
+
+contour(xs, ts, stack(hist))
+plot_1D(xs, ts, hist)
+
+xs, ts, hist = solve_heat_1D(G_Midpoint!, x, Δt, t_final, f, (D1m, D1p));
+
+lines(x, hist[end])
+
+fig, ax = lines(x, hist[1])
+lines!(ax, x, hist[end])
+fig
+
+contour(xs, ts, stack(hist))
+plot_1D(xs, ts, hist)
+
+
+# .504 becomes instable
+xs, ts, hist = solve_heat_1D((args...) -> G_Midpoint!(args...; α = 0.503), x, Δt, t_final, f, (D1m, D1p));
+
+lines(x, hist[end])
+
+fig, ax = lines(x, hist[1])
+lines!(ax, x, hist[end])
+fig
