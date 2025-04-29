@@ -24,6 +24,7 @@ examples = [
     "Implicit" => "implicit",
     "Implicit -- Spring" => "spring",
     "Implicit -- Heat 1D" => "heat_1D",
+    "Implicit -- Heat 1D DG" => "heat_1D_DG",
 ]
 
 for (_, name) in examples
