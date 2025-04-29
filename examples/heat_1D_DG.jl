@@ -28,7 +28,7 @@ D2 = sparse(D1m) * sparse(D1p)
 x = grid(D1m)
 
 # ## Heat 1D
-# $ \frac{\partial u(x, t)}{\partial t} = a * \frac{\partial^2 u(x, t)}{\partial x^2 $
+# $ \frac{\partial u(x, t)}{\partial t} = \frac{\partial^2 u(x, t)}{\partial x^2} $
 
 function heat_1D_v1!(du, u, (D2,), t)
     mul!(du, D2, u)
