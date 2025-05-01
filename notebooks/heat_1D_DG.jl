@@ -47,7 +47,7 @@ end
 
 # ╔═╡ fb2bbeda-ba56-4f29-9805-00fe032cea8c
 # inital conditions
-f(x) = 4x * (1 - x)
+f(x) = sin(x * π)
 
 # ╔═╡ 19736a4a-e350-47d0-9b59-c40013cb8861
 begin
@@ -106,6 +106,9 @@ _, hist_M = solve_heat_1D(Implicit.G_Midpoint!, x, Δt, t_final, f, (D1m, D1p));
 
 # ╔═╡ 74c5f50e-4343-4c0f-82ed-283c01d9433b
 _, hist_T = solve_heat_1D(Implicit.G_Trapezoid!, x, Δt, t_final, f, (D1m, D1p));
+
+# ╔═╡ bdc258fb-56fa-447b-aa56-275aa72b8d81
+@time solve_heat_1D(Implicit.G_Midpoint!, x, Δt, t_final, f, (D1m, D1p));
 
 # ╔═╡ 09c0062e-4c1b-4118-8ccc-6eaa6c25df3b
 function plot_timesteps(x, hist, ts, points; title = "")
@@ -217,6 +220,7 @@ lines(x, hist_M[10])
 # ╠═41a80a1d-07ca-454f-86f7-058a4e617079
 # ╠═70af8096-673a-4525-a6f8-b2d5c72fc28f
 # ╠═74c5f50e-4343-4c0f-82ed-283c01d9433b
+# ╠═bdc258fb-56fa-447b-aa56-275aa72b8d81
 # ╠═09c0062e-4c1b-4118-8ccc-6eaa6c25df3b
 # ╠═c65d5dd2-cc1e-4093-bf48-8506398688d3
 # ╠═d8bed1d3-5e98-4e75-8f4e-2b9424333159
