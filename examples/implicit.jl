@@ -1,4 +1,5 @@
 # # Implicit schemes
+using NewtonKrylov
 
 # ## Implicit Euler
 
