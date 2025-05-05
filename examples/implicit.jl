@@ -40,8 +40,8 @@ end
 
 function jacobian(G!, f!, uₙ, p, Δt, t)
     u = copy(uₙ)
-    du = similar(uₙ)
-    res = similar(uₙ)
+    du = zero(uₙ)
+    res = zero(uₙ)
 
     F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
 
@@ -55,8 +55,8 @@ import Krylov
 
 function solve(G!, f!, uₙ, p, Δt, ts; callback = _ -> nothing, verbose = 0, Workspace = Krylov.GmresWorkspace)
     u = copy(uₙ)
-    du = similar(uₙ)
-    res = similar(uₙ)
+    du = zero(uₙ)
+    res = zero(uₙ)
     F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
 
     for t in ts

@@ -258,6 +258,7 @@ $(KWARGS_DOCS)
 """
 function newton_krylov!(F!, u₀::AbstractArray, p = nothing, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
+    Enzyme.make_zero!(res) # u₀ .= 0 might ignore ghost cells
     return newton_krylov!(F!, u₀, p, res; kwargs...)
 end
 
