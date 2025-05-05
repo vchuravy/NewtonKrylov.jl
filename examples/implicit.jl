@@ -1,4 +1,5 @@
 # # Implicit schemes
+using NewtonKrylov
 
 # ## Implicit Euler
 
@@ -11,11 +12,11 @@ end
 
 # ## Implicit Midpoint
 
-function G_Midpoint!(res, uₙ, Δt, f!, du, u, p, t)
+function G_Midpoint!(res, uₙ, Δt, f!, du, u, p, t; α = 0.5)
     ## Use res for a temporary allocation (uₙ .+ u) ./ 2
     uuₙ = res
-    uuₙ .= (uₙ .+ u) ./ 2
-    f!(du, uuₙ, p, t + Δt / 2)
+    uuₙ .= (α .* uₙ .+ (1 - α) .* u)
+    f!(du, uuₙ, p, t + α * Δt)
 
     res .= uₙ .+ Δt .* du .- u
     return nothing
