@@ -349,7 +349,6 @@ function newton_krylov!(
         end
 
         if forcing !== nothing
-            # prev_η = η
             η = forcing(η, tol, n_res, n_res_prior)
         end
 
