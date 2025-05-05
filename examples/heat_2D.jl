@@ -17,8 +17,7 @@ function bc_periodic!(u)
     N = N - 2
     M = M - 2
 
-    # Enforce boundary conditions
-    # (wrap around)
+    ## (wrap around)
     u[0, :] .= u[N, :]
     u[N + 1, :] .= u[1, :]
     u[:, 0] .= u[:, N]
