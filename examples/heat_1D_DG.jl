@@ -17,7 +17,7 @@ elements = 40
 D_local = legendre_derivative_operator(xmin = -1.0, xmax = 1.0, N = polydeg + 1)
 mesh = UniformPeriodicMesh1D(; xmin, xmax, Nx = elements)
 
-# D1m = D1p = couple_discontinuously(D_local, mesh, Val(:central))
+## D1m = D1p = couple_discontinuously(D_local, mesh, Val(:central))
 D1m = couple_discontinuously(D_local, mesh, Val(:minus))
 D1p = couple_discontinuously(D_local, mesh, Val(:plus))
 
@@ -37,16 +37,13 @@ end
 
 function heat_1D!(du, u, (D1m, D1p), t)
     du1 = D1p * u
-    # mul!(du, D1p, u)
-
     mul!(du, D1m, du1)
-    # mul!(du, D1m, u, 1, 1)
     return
 end
 
-# inital condition
+# Inital condition:
 
-f(x) = 4x * (1 - x)
+f(x) = sin(π * x)
 
 using LinearAlgebra
 
@@ -186,7 +183,7 @@ contour(xs, ts, stack(hist))
 plot_1D(xs, ts, hist)
 
 
-# .504 becomes instable
+## .504 becomes instable
 xs, ts, hist = solve_heat_1D((args...) -> G_Midpoint!(args...; α = 0.503), x, Δt, t_final, f, (D1m, D1p));
 
 lines(x, hist[end])
