@@ -146,3 +146,9 @@ create_video_implicit(
     joinpath(@__DIR__, "implicit_trapezoid.mp4"),
     G_Trapezoid!, diffusion!, xs, ys, copy(u₀), (a, Δx, Δy, bc_zero!), Δt, 10.0, (; framerate = 30)
 )
+
+## TODO:
+## create_video_implicit(
+##     joinpath(@__DIR__, "implicit_euler_periodic.mp4"),
+##     G_Trapezoid!, diffusion!, xs, ys, copy(u₀), (a, Δx, Δy, bc_periodic!), Δt, 2*Δt, (; framerate = 30)
+## )
