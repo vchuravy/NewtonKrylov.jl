@@ -128,7 +128,7 @@ function create_video_implicit(filename, G!, f!, xs, ys, u, p, Δt, t_stop, fram
             recordframe!(io)
             return yield()
         end
-        solve(G!, f!, u, p, Δt, ts; callback, verbose = 1)
+        solve(G!, f!, u, p, Δt, ts; callback, verbose = 1, krylov_kwargs = (; verbose = 1))
     end
 end
 

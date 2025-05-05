@@ -53,7 +53,10 @@ end
 
 import Krylov
 
-function solve(G!, f!, uₙ, p, Δt, ts; callback = _ -> nothing, verbose = 0, Workspace = Krylov.GmresWorkspace)
+function solve(
+        G!, f!, uₙ, p, Δt, ts; callback = _ -> nothing,
+        verbose = 0, Workspace = Krylov.GmresWorkspace, krylov_kwargs = (;)
+    )
     u = copy(uₙ)
     du = zero(uₙ)
     res = zero(uₙ)
@@ -63,7 +66,10 @@ function solve(G!, f!, uₙ, p, Δt, ts; callback = _ -> nothing, verbose = 0, W
         if t == first(ts)
             continue
         end
-        _, stats = newton_krylov!(F!, u, (uₙ, Δt, du, p, t), res; verbose, Workspace, tol_abs = 6.0e-6)
+        _, stats = newton_krylov!(
+            F!, u, (uₙ, Δt, du, p, t), res;
+            verbose, Workspace, tol_abs = 6.0e-6, krylov_kwargs
+        )
         if !stats.solved
             @warn "non linear solve failed marching on" t stats
         end

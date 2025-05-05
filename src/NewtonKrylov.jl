@@ -363,8 +363,8 @@ function newton_krylov!(
             @info "Inexact Newton thinks our step is good enough " η stats
         end
 
-        verbose > 0 && @info "Newton" iter = n_res η stats
         stats = update(stats, workspace.stats.niter, n_res)
+        verbose > 0 && @info "Newton" iter = n_res η stats
     end
     t = (time_ns() - t₀) / 1.0e9
     return u, (; solved = n_res <= tol, stats, t)
