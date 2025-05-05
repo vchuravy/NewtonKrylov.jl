@@ -19,8 +19,8 @@ function diffusion!(du, u, (a, Δx, Δy), _)
     N = N - 2
     M = M - 2
 
-    # Enforce boundary conditions
-    # (wrap around)
+    ## Enforce boundary conditions
+    ## (wrap around)
     u[0, :] .= u[N, :]
     u[N + 1, :] .= u[1, :]
     u[:, 0] .= u[:, N]
@@ -44,7 +44,7 @@ N = M = 40
 Δx = 1 / (N + 1)  # x-grid spacing
 Δy = 1 / (M + 1)  # y-grid spacing
 
-# TODO: This is a time-step from explicit
+## TODO: This is a time-step from explicit
 Δt = Δx^2 * Δy^2 / (2.0 * a * (Δx^2 + Δy^2)) # Largest stable time step
 
 u₀ = HaloVector(OffsetArray(zeros(N + 2, M + 2), 0:(N + 1), 0:(M + 1)))
@@ -118,7 +118,7 @@ function create_video(filename, method, N, M, method_args, frame_kwargs)
     return record(fig, filename; frame_kwargs...) do io
         function callback(_u, t)
             Base.notify(hm.args[3])
-            # autolimits!(ax) # update limits
+            ## autolimits!(ax) # update limits
             recordframe!(io)
             return yield()
         end
@@ -127,6 +127,6 @@ function create_video(filename, method, N, M, method_args, frame_kwargs)
 end
 
 create_video(joinpath(@__DIR__, "explicit.mp4"), explicit_diffusion, N, M, (0.01, 0.01, 0.01, 0.2), (; framerate = 10))
-# create_video(joinpath(@__DIR__, "implicit_euler.mp4"), (args...; kwargs...)->implicit_diffusion(G_Euler!, args...; kwargs...), 40, 40, (0.01, 0.01, 0.01, 0.2), (;framerate=10))
-# create_video(joinpath(@__DIR__, "implicit_midpoint.mp4"), (args...; kwargs...)->implicit_diffusion(G_Midpoint!, args...; kwargs...), 40, 40, (0.01, 0.01, 0.01, 0.2), (;framerate=10))
-# create_video(joinpath(@__DIR__, "implicit_trapezoid.mp4"), (args...; kwargs...)->implicit_diffusion(G_Trapezoid!, args...; kwargs...), 40, 40, (0.01, 0.01, 0.01, 0.2), (;framerate=10))
+## create_video(joinpath(@__DIR__, "implicit_euler.mp4"), (args...; kwargs...)->implicit_diffusion(G_Euler!, args...; kwargs...), 40, 40, (0.01, 0.01, 0.01, 0.2), (;framerate=10))
+## create_video(joinpath(@__DIR__, "implicit_midpoint.mp4"), (args...; kwargs...)->implicit_diffusion(G_Midpoint!, args...; kwargs...), 40, 40, (0.01, 0.01, 0.01, 0.2), (;framerate=10))
+## create_video(joinpath(@__DIR__, "implicit_trapezoid.mp4"), (args...; kwargs...)->implicit_diffusion(G_Trapezoid!, args...; kwargs...), 40, 40, (0.01, 0.01, 0.01, 0.2), (;framerate=10))
