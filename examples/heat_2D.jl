@@ -5,8 +5,8 @@ using NewtonKrylov
 using CairoMakie
 using OffsetArrays
 
-include("implicit.jl")
-include("halovector.jl")
+include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
+include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "halovector.jl"))
 
 # ## Diffusion 2D
 
