@@ -38,6 +38,11 @@ using LinearAlgebra
 # ╔═╡ 5bffc041-0019-4f1f-9711-170b82f62926
 Implicit = @ingredients(joinpath(@__DIR__, "../examples/implicit.jl"));
 
+# ╔═╡ 493850fa-87db-452d-961a-26f92c88d18f
+md"""
+- Caching for `du1`.
+"""
+
 # ╔═╡ 99fbb969-8282-40c9-a24a-661989760e58
 function heat_1D!(du, u, (D1m, D1p), t)
     du1 = D1p * u
@@ -169,6 +174,9 @@ end
 # ╔═╡ bbbf1ea6-fa8b-45b9-af33-24d470ff2ec5
 _, hist_EU = solve_heat_1D(Implicit.G_Euler!, x_U, Δt, t_final, f, (D.minus, D.plus));
 
+# ╔═╡ 4483475a-d3ef-40f3-872b-a85aa6728d70
+_, hist_MU = solve_heat_1D(Implicit.G_Midpoint!, x_U, Δt, t_final, f, (D.minus, D.plus));
+
 # ╔═╡ dae91988-9c15-43ba-9948-97a5f01650e7
 plot_timesteps(x_U, hist_EU, ts, [1, 2, 3, 4, 5, 10, length(ts)]; title = "Euler-Upwind Δt=$(Δt)")
 
@@ -207,6 +215,7 @@ lines(x, hist_M[10])
 # ╠═32e51b56-268b-11f0-2d27-f3a6d736affe
 # ╠═5bffc041-0019-4f1f-9711-170b82f62926
 # ╠═42460e8e-91ea-488f-9833-c660d26bad75
+# ╟─493850fa-87db-452d-961a-26f92c88d18f
 # ╠═99fbb969-8282-40c9-a24a-661989760e58
 # ╠═fb2bbeda-ba56-4f29-9805-00fe032cea8c
 # ╠═19736a4a-e350-47d0-9b59-c40013cb8861
@@ -235,6 +244,7 @@ lines(x, hist_M[10])
 # ╟─113c61ff-beaa-4552-9978-55c5bc66f6cb
 # ╠═7284520b-5115-43ac-a1e9-0e1bdd2c0d12
 # ╠═bbbf1ea6-fa8b-45b9-af33-24d470ff2ec5
+# ╠═4483475a-d3ef-40f3-872b-a85aa6728d70
 # ╠═dae91988-9c15-43ba-9948-97a5f01650e7
 # ╟─3a5c3f81-a818-4d35-a4bc-d507ed89c2fa
 # ╠═901dacf2-fb00-4f5f-9d33-e8cae05064fc
