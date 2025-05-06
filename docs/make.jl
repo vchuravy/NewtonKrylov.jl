@@ -4,7 +4,30 @@ using NewtonKrylov
 using Documenter
 import Documenter.Remotes: GitHub
 using Literate
+using PlutoStaticHTML
 using DocumenterCitations
+
+const NOTEBOOK_DIR = joinpath(@__DIR__, "src", "notebooks")
+
+"""
+    build()
+
+Run all Pluto notebooks (".jl" files) in `NOTEBOOK_DIR`.
+"""
+function build()
+    println("Building notebooks in $NOTEBOOK_DIR")
+    oopts = OutputOptions(; append_build_context = true)
+    output_format = documenter_output
+    bopts = BuildOptions(NOTEBOOK_DIR; output_format)
+    build_notebooks(bopts, oopts)
+    return nothing
+end
+
+# Build the notebooks; defaults to true.
+if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
+    build()
+end
+
 
 DocMeta.setdocmeta!(NewtonKrylov, :DocTestSetup, :(using NewtonKrylov); recursive = true)
 
@@ -58,6 +81,10 @@ makedocs(;
     pages = [
         "Home" => "index.md",
         "Examples" => examples,
+        "Notebooks" => [
+            "Heat 2D" => "notebooks/heat_2d.md",
+            "Heat 1D DG" => "notebooks/heat_1D_DG.md",
+        ],
     ],
     doctest = true,
     linkcheck = true,
