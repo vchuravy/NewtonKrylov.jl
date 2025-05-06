@@ -219,7 +219,7 @@ const KWARGS_DOCS = """
   - `forcing`: Maximum forcing term for inexact Newton.
              If `nothing` an exact Newton method is used.  
   - `verbose`:
-  - `Solver`:
+  - `Workspace`:
   - `M`:
   - `N`:
   - `krylov_kwarg`
@@ -286,7 +286,7 @@ function newton_krylov!(
         max_niter = 50,
         forcing::Union{Forcing, Nothing} = EisenstatWalker(),
         verbose = 0,
-        Solver = GmresSolver,
+        Workspace = GmresWorkspace,
         M = nothing,
         N = nothing,
         krylov_kwargs = (;),
@@ -306,7 +306,9 @@ function newton_krylov!(
     verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀ = n_res tol tol_rel tol_abs η
 
     J = JacobianOperator(F!, res, u, p)
-    solver = Solver(J, res)
+
+    kc = KrylovConstructor(res)
+    workspace = Workspace(kc)
 
     stats = Stats(0, 0, n_res)
     while n_res > tol && stats.outer_iterations <= max_niter
@@ -326,13 +328,13 @@ function newton_krylov!(
         # Solve: Jx = -res
         # res is modifyed by J, so we create a copy `-res`
         # TODO: provide a temporary storage for `-res`
-        solve!(solver, J, -res; kwargs...)
+        krylov_solve!(workspace, J, copy(res); kwargs...)
 
-        d = solver.x # Newton direction
+        d = workspace.x # Newton direction
         s = 1        # Newton step TODO: LineSearch
 
         # Update u
-        u .+= s .* d
+        u .-= s .* d
 
         # Update residual and norm
         n_res_prior = n_res
@@ -351,12 +353,12 @@ function newton_krylov!(
         end
 
         # This is almost to be expected for implicit time-stepping
-        if verbose > 0 && solver.stats.niter == 0 && forcing !== nothing
+        if verbose > 0 && workspace.stats.niter == 0 && forcing !== nothing
             @info "Inexact Newton thinks our step is good enough " η stats
         end
 
         verbose > 0 && @info "Newton" iter = n_res η stats
-        stats = update(stats, solver.stats.niter, n_res)
+        stats = update(stats, workspace.stats.niter, n_res)
     end
     t = (time_ns() - t₀) / 1.0e9
     return u, (; solved = n_res <= tol, stats, t)

@@ -63,7 +63,7 @@ fig
 uₖ, _ = newton_krylov!(
     bratu!,
     copy(u₀), (dx, λ), similar(u₀);
-    Solver = CgSolver,
+    Workspace = CgWorkspace,
 )
 
 ϵ = abs2.(uₖ .- reference)

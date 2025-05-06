@@ -59,7 +59,7 @@ fig
 uₖ, _ = newton_krylov!(
     bratu!,
     copy(u₀), (dx, λ), similar(u₀);
-    Solver = CgSolver,
+    Workspace = CgWorkspace,
 )
 
 ϵ = abs2.(uₖ .- reference)
@@ -85,7 +85,7 @@ end
 _, stats = newton_krylov(
     bratu,
     copy(u₀), (dx, λ);
-    Solver = CgSolver
+    Workspace = CgWorkspace
 )
 stats
 
@@ -93,7 +93,7 @@ stats
 _, stats = newton_krylov!(
     bratu!,
     copy(u₀), (dx, λ), similar(u₀);
-    Solver = CgSolver,
+    Workspace = CgWorkspace,
     forcing = NewtonKrylov.Fixed(0.1)
 )
 stats
@@ -102,7 +102,7 @@ stats
 _, stats = newton_krylov!(
     bratu!,
     copy(u₀), (dx, λ), similar(u₀);
-    Solver = CgSolver,
+    Workspace = CgWorkspace,
     forcing = nothing
 )
 stats
@@ -112,7 +112,7 @@ stats
 # _, stats = newton_krylov!(
 #     bratu!,
 #     copy(u₀), (dx, λ), similar(u₀);
-#     Solver = GmresSolver,
+#     Workspace = GmresWorkspace,
 # )
 # stats
 # ```
@@ -121,7 +121,7 @@ stats
 _, stats = newton_krylov!(
     bratu!,
     copy(u₀), (dx, λ), similar(u₀);
-    Solver = GmresSolver,
+    Workspace = GmresWorkspace,
     N = (J) -> ilu(collect(J)), # Assembles the full Jacobian
     krylov_kwargs = (; ldiv = true)
 )
@@ -131,7 +131,7 @@ stats
 _, stats = newton_krylov!(
     bratu!,
     copy(u₀), (dx, λ), similar(u₀);
-    Solver = FgmresSolver,
+    Workspace = FgmresWorkspace,
     N = (J) -> ilu(collect(J)), # Assembles the full Jacobian
     krylov_kwargs = (; ldiv = true)
 )
@@ -151,7 +151,7 @@ end
 _, stats = newton_krylov!(
     bratu!,
     copy(u₀), (dx, λ), similar(u₀);
-    Solver = FgmresSolver,
+    Workspace = FgmresWorkspace,
     N = (J) -> GmresPreconditioner(J, 5),
 )
 stats
@@ -161,7 +161,7 @@ stats
 # newton_krylov!(
 # 	bratu!,
 # 	copy(u₀), (dx, λ), similar(u₀);
-# 	Solver = CglsSolver, # CgneSolver
+# 	Workspace = CglsWorkspace, # CgneWorkspace
 #   krylov_kwargs = (; verbose=1)
 # )
 # ```
@@ -171,7 +171,7 @@ stats
 # 	bratu!,
 # 	copy(u₀), (dx, λ), similar(u₀);
 # 	verbose = 1,
-# 	Solver = BicgstabSolver, # L=2
+# 	Workspace = BicgstabWorkspace, # L=2
 # 	η_max = nothing
 # )
 # ```
