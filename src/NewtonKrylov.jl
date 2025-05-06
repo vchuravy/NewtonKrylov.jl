@@ -309,7 +309,7 @@ function newton_krylov!(
         η = inital(forcing)
     end
 
-    verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀ = n_res tol tol_rel tol_abs η
+    verbose > 0 && @info "Jacobian-Free Newton-Krylov" Workspace res₀ = n_res tol tol_rel tol_abs η
 
     J = JacobianOperator(F!, res, u, p)
 
