@@ -6,7 +6,7 @@ using CairoMakie
 using LinearAlgebra
 using SummationByPartsOperators
 
-# Include the implicit time-steppers from [`Implicit schemes`](/implicit)
+# Include the implicit time-steppers from [`Implicit schemes`](@ref implicit_schemes)
 
 include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"));
 

@@ -1,4 +1,4 @@
-# # Implicit schemes
+# # [Implicit schemes](@id implicit_schemes)
 using NewtonKrylov
 
 # ## Implicit Euler
