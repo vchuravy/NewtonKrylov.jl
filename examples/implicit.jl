@@ -1,6 +1,8 @@
 # # [Implicit schemes](@id implicit_schemes)
 using NewtonKrylov
 
+using NewtonKrylov
+
 # ## Implicit Euler
 
 function G_Euler!(res, uₙ, Δt, f!, du, u, p, t)
@@ -38,8 +40,8 @@ end
 
 function jacobian(G!, f!, uₙ, p, Δt, t)
     u = copy(uₙ)
-    du = similar(uₙ)
-    res = similar(uₙ)
+    du = zero(uₙ)
+    res = zero(uₙ)
 
     F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
 
@@ -51,17 +53,23 @@ end
 
 import Krylov
 
-function solve(G!, f!, uₙ, p, Δt, ts; callback = _ -> nothing, verbose = 0, Workspace = Krylov.GmresWorkspace)
+function solve(
+        G!, f!, uₙ, p, Δt, ts; callback = _ -> nothing,
+        verbose = 0, Workspace = Krylov.GmresWorkspace, krylov_kwargs = (;)
+    )
     u = copy(uₙ)
-    du = similar(uₙ)
-    res = similar(uₙ)
+    du = zero(uₙ)
+    res = zero(uₙ)
     F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
 
     for t in ts
         if t == first(ts)
             continue
         end
-        _, stats = newton_krylov!(F!, u, (uₙ, Δt, du, p, t), res; verbose, Workspace, tol_abs = 6.0e-6)
+        _, stats = newton_krylov!(
+            F!, u, (uₙ, Δt, du, p, t), res;
+            verbose, Workspace, tol_abs = 6.0e-6, krylov_kwargs
+        )
         if !stats.solved
             @warn "non linear solve failed marching on" t stats
         end

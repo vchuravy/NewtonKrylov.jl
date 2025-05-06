@@ -139,8 +139,13 @@ end # VERSION >= v"1.11.0"
 
 function Base.collect(JOp::Union{Adjoint{<:Any, <:JacobianOperator}, Transpose{<:Any, <:JacobianOperator}, JacobianOperator})
     N, M = size(JOp)
-    v = zeros(eltype(JOp), M)
-    out = zeros(eltype(JOp), N)
+    if JOp isa JacobianOperator
+        v = zero(JOp.u)
+        out = zero(JOp.res)
+    else
+        v = zero(parent(JOp).res)
+        out = zero(parent(JOp).u)
+    end
     J = SparseMatrixCSC{eltype(v), Int}(undef, size(JOp)...)
     for j in 1:M
         out .= 0.0
@@ -253,6 +258,7 @@ $(KWARGS_DOCS)
 """
 function newton_krylov!(F!, u₀::AbstractArray, p = nothing, M::Int = length(u₀); kwargs...)
     res = similar(u₀, M)
+    Enzyme.make_zero!(res) # u₀ .= 0 might ignore ghost cells
     return newton_krylov!(F!, u₀, p, res; kwargs...)
 end
 
@@ -303,7 +309,7 @@ function newton_krylov!(
         η = inital(forcing)
     end
 
-    verbose > 0 && @info "Jacobian-Free Newton-Krylov" Solver res₀ = n_res tol tol_rel tol_abs η
+    verbose > 0 && @info "Jacobian-Free Newton-Krylov" Workspace res₀ = n_res tol tol_rel tol_abs η
 
     J = JacobianOperator(F!, res, u, p)
 
@@ -357,8 +363,8 @@ function newton_krylov!(
             @info "Inexact Newton thinks our step is good enough " η stats
         end
 
-        verbose > 0 && @info "Newton" iter = n_res η stats
         stats = update(stats, workspace.stats.niter, n_res)
+        verbose > 0 && @info "Newton" iter = n_res η stats
     end
     t = (time_ns() - t₀) / 1.0e9
     return u, (; solved = n_res <= tol, stats, t)

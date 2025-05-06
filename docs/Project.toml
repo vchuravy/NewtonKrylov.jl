@@ -8,6 +8,7 @@ KrylovPreconditioners = "45d422c2-293f-44ce-8315-2cb988662dec"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 NewtonKrylov = "0be81120-40bf-4f8b-adf0-26103efb66f1"
+OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SummationByPartsOperators = "9f78cca6-572e-554e-b819-917d2f1cf240"
 
