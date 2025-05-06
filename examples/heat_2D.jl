@@ -124,7 +124,7 @@ function create_video_implicit(filename, G!, f!, xs, ys, u, p, Δt, t_stop, fram
         function callback(__u)
             _u[] = u
             _t[] += Δt
-            # autolimits!(ax) # update limits
+            ## autolimits!(ax) # update limits
             recordframe!(io)
             return yield()
         end
