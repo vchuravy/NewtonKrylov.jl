@@ -4,6 +4,8 @@
 using NewtonKrylov
 using CairoMakie
 
+# Include the implicit time-steppers from [`Implicit schemes`](/implicit)
+
 include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
 
 # ## Spring equations
@@ -14,6 +16,7 @@ function f!(du, u, (γ,), t)
     return nothing
 end
 
+# ## Problem setup
 function implicit_spring(G! = G_Euler!, Δt = 0.01; verbose = 0)
     k = 2.0    # spring constant
     m = 1.0    # object's mass
@@ -37,7 +40,6 @@ end
 
 
 # ## Plots
-
 function compare(Δt = 0.01)
     hist_euler, ts_euler = implicit_spring(G_Euler!, Δt)
     v_euler = map(y -> y[1], hist_euler)
@@ -67,16 +69,22 @@ function compare(Δt = 0.01)
     return fig
 end
 
+# ### t = 0.01
 compare(0.01)
 
+# ### t = 0.02
 compare(0.02)
 
+# ### t = 0.05
 compare(0.05)
 
+# ### t = 0.1
 compare(0.1)
 
+# ### t = 1.0
 compare(1.0)
 
+# ### t = 1.0
 compare(10.0)
 
 # ## Jacobian of implicit step
