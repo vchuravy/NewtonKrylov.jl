@@ -77,6 +77,7 @@ makedocs(;
             "assets/citations.css",
         ],
         mathengine = MathJax3(),
+        size_threshold=1_000_000,
     ),
     pages = [
         "Home" => "index.md",
