@@ -22,6 +22,7 @@ begin
     # careful: this is _not_ a reproducible environment
     # activate the local environment
     Pkg.activate(".")
+    Pkg.instantiate()
     using PlutoUI, PlutoLinks
     using CairoMakie
 end
@@ -84,13 +85,13 @@ function diffusion!(du, u, (a, Δx, Δy, bc!), _)
 end
 
 # ╔═╡ 91d3c59d-a144-4dd2-9e1f-d532c010f442
-HaloVectors = @ingredients(joinpath(dirname(pathof(NewtonKrylov)), "examples/halovector.jl"));
+HaloVectors = @ingredients(joinpath(dirname(pathof(NewtonKrylov)), "../examples/halovector.jl"))
 
 # ╔═╡ 2031ff0e-3b8a-4b21-a49f-e661d810994f
 import .HaloVectors: HaloVector
 
 # ╔═╡ 8aebcc1b-ac2b-40a5-9ca2-cbf3e24fdbb8
-Implicit = @ingredients(joinpath(dirname(pathof(NewtonKrylov)), "examples/implicit.jl"));
+Implicit = @ingredients(joinpath(dirname(pathof(NewtonKrylov)), "../examples/implicit.jl"));
 
 # ╔═╡ 56354eaa-a634-45e1-9001-84c1d69f845f
 import .Implicit: jacobian, solve, G_Euler!

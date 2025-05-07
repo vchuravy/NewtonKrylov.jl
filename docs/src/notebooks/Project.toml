@@ -7,3 +7,6 @@ Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
 PlutoLinks = "0ff47ea0-7a50-410d-8455-4348d5de0420"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 SummationByPartsOperators = "9f78cca6-572e-554e-b819-917d2f1cf240"
+
+[sources]
+NewtonKrylov = {path = "../../.."}

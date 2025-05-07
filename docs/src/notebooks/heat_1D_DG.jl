@@ -22,6 +22,7 @@ begin
     # careful: this is _not_ a reproducible environment
     # activate the local environment
     Pkg.activate(".")
+    Pkg.instantiate()
     using PlutoUI, PlutoLinks
     using CairoMakie
 end
@@ -36,7 +37,7 @@ using SummationByPartsOperators
 using LinearAlgebra
 
 # ╔═╡ 5bffc041-0019-4f1f-9711-170b82f62926
-Implicit = @ingredients(joinpath(dirname(pathof(NewtonKrylov)), "examples/implicit.jl"));
+Implicit = @ingredients(joinpath(dirname(pathof(NewtonKrylov)), "../examples/implicit.jl"));
 
 # ╔═╡ 493850fa-87db-452d-961a-26f92c88d18f
 md"""
