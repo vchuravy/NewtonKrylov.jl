@@ -292,7 +292,7 @@ function newton_krylov!(
         max_niter = 50,
         forcing::Union{Forcing, Nothing} = EisenstatWalker(),
         verbose = 0,
-        Workspace = GmresWorkspace,
+        algo = :gmres,
         M = nothing,
         N = nothing,
         krylov_kwargs = (;),
@@ -309,12 +309,13 @@ function newton_krylov!(
         η = inital(forcing)
     end
 
-    verbose > 0 && @info "Jacobian-Free Newton-Krylov" Workspace res₀ = n_res tol tol_rel tol_abs η
+    verbose > 0 && @info "Jacobian-Free Newton-Krylov" algo res₀ = n_res tol tol_rel tol_abs η
 
     J = JacobianOperator(F!, res, u, p)
 
+    # TODO: Refactor to provide method that re-uses the cache here.
     kc = KrylovConstructor(res)
-    workspace = Workspace(kc)
+    workspace = krylov_workspace(algo, kc)
 
     stats = Stats(0, 0, n_res)
     while n_res > tol && stats.outer_iterations <= max_niter
