@@ -51,11 +51,9 @@ end
 
 # ## Non-adaptive time stepping
 
-import Krylov
-
 function solve(
         G!, f!, uₙ, p, Δt, ts; callback = _ -> nothing,
-        verbose = 0, Workspace = Krylov.GmresWorkspace, krylov_kwargs = (;)
+        verbose = 0, algo = :gmres, krylov_kwargs = (;)
     )
     u = copy(uₙ)
     du = zero(uₙ)
@@ -68,7 +66,7 @@ function solve(
         end
         _, stats = newton_krylov!(
             F!, u, (uₙ, Δt, du, p, t), res;
-            verbose, Workspace, tol_abs = 6.0e-6, krylov_kwargs
+            verbose, algo, tol_abs = 6.0e-6, krylov_kwargs
         )
         if !stats.solved
             @warn "non linear solve failed marching on" t stats

@@ -53,7 +53,7 @@ function BVP_solve(n = 801, T = Float64)
 
     bvpout, stats = newton_krylov!(
         Fbvp!, U0, (force, tv, tvdag, h, n), res,
-        Workspace = FgmresWorkspace,
+        algo = :fgmres,
         N = (J) -> GmresPreconditioner(J, 30),
     )
     return (; bvpout, tv, stats)
