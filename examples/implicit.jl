@@ -5,10 +5,10 @@ using NewtonKrylov
 
 # ## Implicit Euler
 
-function G_Euler!(res, uₙ, Δt, f!, du, u, p, t)
-    f!(du, u, p, t)
+function G_Euler!(res, uₙ, Δt, f!, du, U, p, t)
+    f!(du, U, p, t)
 
-    res .= uₙ .+ Δt .* du .- u
+    res .= uₙ .+ Δt .* du .- U
     return nothing
 end
 
@@ -43,7 +43,10 @@ function jacobian(G!, f!, uₙ, p, Δt, t)
     du = zero(uₙ)
     res = zero(uₙ)
 
-    F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
+    function F!(res, u, P)
+        (uₙ, Δt, du, p, t) = P
+        return G!(res, uₙ, Δt, f!, du, u, p, t)
+    end
 
     J = NewtonKrylov.JacobianOperator(F!, res, u, (uₙ, Δt, du, p, t))
     return collect(J)

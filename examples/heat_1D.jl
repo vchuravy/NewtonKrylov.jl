@@ -5,21 +5,17 @@ using NewtonKrylov
 using CairoMakie
 
 include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
+include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "stencils.jl"))
 
 # ## Heat 1D
 # $ \frac{\partial u(x, t)}{\partial t} = a * \frac{\partial^2 u(x, t)}{\partial x^2 $
 
-function heat_1D!(du, u, (a, Δx, bc!), t)
-    N = length(u)
+function heat_1D!(du, U, (a, Δx, stencil), t)
+    N = length(U)
 
-    ## Enforce the boundary condition
-    bc!(u)
-    du[1] = 0
-    du[end] = 0
-
-    ## Only compute within
-    for i in 2:(N - 1)
-        du[i] = a * (u[i + 1] - 2u[i] + u[i - 1]) / Δx^2
+    for i in 1:N
+        u = stencil(U, i)
+        du[i] = a * D²ₓ(u, Δx)
     end
     return
 end
@@ -31,19 +27,12 @@ end
 # L = 1
 # x ∈ (0,L)
 
-function bc!(u)
-    u[1] = 0
-    return u[end] = 0
-end
-
-function periodic_bc!(u)
-    u[1] = u[end - 1]
-    return u[end] = u[2]
-end
-
 # inital condition
 
-f(x) = 4x * (1 - x)
+f(x) = sin(π * x)
+
+dirchlet = ThreePointStencil(Constant(0.0, 0.0))
+periodic = ThreePointStencil(Periodic())
 
 a = 0.5
 
@@ -54,7 +43,7 @@ using LinearAlgebra
 # ## Investigate the Jacobian's
 
 # ### Euler
-J = jacobian(G_Euler!, heat_1D!, zeros(N), (a, 1 / (N + 1), bc!), 0.1, 0.0)
+J = jacobian(G_Euler!, heat_1D!, zeros(N), (a, 1 / (N + 1), dirchlet), 0.1, 0.0)
 
 # Rank:
 
