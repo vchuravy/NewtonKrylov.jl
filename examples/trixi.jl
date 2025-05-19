@@ -77,15 +77,69 @@ semi = SemidiscretizationHyperbolicParabolic(
 tspan = (0.0, 1.0)
 ode = semidiscretize(semi, tspan)
 
-using NewtonKrylov
+# At the beginning of the main loop, the SummaryCallback prints a summary of the simulation setup
+# and resets the timers
+summary_callback = SummaryCallback()
 
-include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
+# The AnalysisCallback allows to analyse the solution in regular intervals and prints the results
+analysis_interval = 100
+analysis_callback = AnalysisCallback(
+    semi, interval = analysis_interval,
+    extra_analysis_integrals = (entropy, energy_total)
+)
+
+# The AliveCallback prints short status information in regular intervals
+alive_callback = AliveCallback(analysis_interval = analysis_interval)
+
+# The SaveRestartCallback allows to save a file from which a Trixi.jl simulation can be restarted
+save_restart = SaveRestartCallback(
+    interval = 100,
+    save_final_restart = true
+)
+
+# The SaveSolutionCallback allows to save the solution to a file in regular intervals
+save_solution = SaveSolutionCallback(
+    interval = 100,
+    save_initial_solution = true,
+    save_final_solution = true,
+    solution_variables = cons2prim
+)
+
+# The StepsizeCallback handles the re-calculation of the maximum Δt after each time step
+stepsize_callback = StepsizeCallback(cfl = 1.6)
+
+# Create a CallbackSet to collect all callbacks such that they can be passed to the ODE solver
+callbacks = CallbackSet(
+    summary_callback,
+    analysis_callback, alive_callback,
+    save_restart, save_solution,
+    stepsize_callback
+)
+
+###############################################################################
+# run the simulation
+
+using NewtonKrylov
+using Implicit
+
+module Simple
+    using NewtonKrylov
+    include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
+end
 
 # ## Jacobian
-J = jacobian(G_Euler!, ode.f, ode.u0, ode.p, 0.1, first(ode.tspan))
+J = Simple.jacobian(Implicit.ImplicitEuler(), ode.f, ode.u0, ode.p, 0.1, first(ode.tspan))
 
-# ## Solve with fixed timestep
+# ## Solve with explicit timesteps
 
 Δt = 0.01
 ts = first(ode.tspan):Δt:last(ode.tspan)
-solve(G_Euler!, ode.f, ode.u0, ode.p, Δt, ts; verbose = 1, krylov_kwargs = (; verbose = 1))
+Simple.solve(Simple.G_Euler!, ode.f, ode.u0, ode.p, Δt, ts; verbose = 1, krylov_kwargs = (; verbose = 1))
+
+# ## Solve using ODE interface
+
+sol = solve(
+    ode, Implicit.ImplicitEuler();
+    dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
+    ode_default_options()..., callback = callbacks
+);
