@@ -30,6 +30,19 @@ function DiffEqBase.get_tstops_max(integrator::AbstractTimeIntegrator)
     return maximum(get_tstops_array(integrator))
 end
 
+function finalize_callbacks(integrator::AbstractTimeIntegrator)
+    callbacks = integrator.opts.callback
+
+    return if callbacks isa CallbackSet
+        foreach(callbacks.discrete_callbacks) do cb
+            cb.finalize(cb, integrator.u, integrator.t, integrator)
+        end
+        foreach(callbacks.continuous_callbacks) do cb
+            cb.finalize(cb, integrator.u, integrator.t, integrator)
+        end
+    end
+end
+
 import SciMLBase: get_du, get_tmp_cache, u_modified!,
     init, step!, check_error,
     get_proposed_dt, set_proposed_dt!,
@@ -202,11 +215,11 @@ function step!(integrator::SimpleImplicit)
     # one time step
     integrator.u_tmp .= integrator.u
 
-    F!(res, u, (uₙ, Δt, du, p, t)) = alg(res, uₙ, Δt, f!, du, u, p, t)
-    _, stats = newton_krylov!(
+    F!(res, u, (uₙ, Δt, du, p, t)) = alg(res, uₙ, Δt, integrator.f, du, u, p, t)
+    _, stats = NewtonKrylov.newton_krylov!(
         F!, integrator.u_tmp, (integrator.u, integrator.dt, integrator.du, integrator.p, integrator.t), integrator.res;
         # verbose, krylov_kwargs
-        alg = :gmres, tol_abs = 6.0e-6
+        algo = :gmres, tol_abs = 6.0e-6
     )
     integrator.u .= integrator.u_tmp
 
