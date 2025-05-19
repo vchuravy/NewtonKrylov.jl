@@ -1,91 +1,150 @@
+# # Using the NewtonKrylov.jl based implicit solver with Trixi.jl
+
 using Trixi
+using Implicit
+using CairoMakie
 
-# Example based on https://github.com/trixi-framework/Trixi.jl/blob/main/examples/tree_1d_dgsem/elixir_advection_extended.jl
 
-###############################################################################
-# semidiscretization of the linear advection diffusion equation
+# Notes:
+# Must disable both Polyester and LoopVectorization for Enzyme to be able to differentiate Trixi.jl
+# Using https://github.com/trixi-framework/Trixi.jl/pull/2295
+#
+# LocalPreferences.jl
+# ```toml
+# [Trixi]
+# loop_vectorization = false
+# polyester = false
+# ```
 
-advection_velocity = 0.1
-equations = LinearScalarAdvectionEquation1D(advection_velocity)
-diffusivity() = 0.1
-equations_parabolic = LaplaceDiffusion1D(diffusivity(), equations)
+@assert !Trixi._PREFERENCE_POLYESTER
+@assert !Trixi._PREFERENCE_LOOPVECTORIZATION
 
-# Create DG solver with polynomial degree = 3 and (local) Lax-Friedrichs/Rusanov flux as surface flux
-solver = DGSEM(polydeg = 3, surface_flux = flux_lax_friedrichs)
+# ## Load Trixi Example
+trixi_include(joinpath(examples_dir(), "tree_2d_dgsem", "elixir_advection_basic.jl"), sol = nothing);
+# trixi_include(joinpath(examples_dir(), "tree_2d_dgsem", "elixir_advection_basic.jl"));
 
-coordinates_min = -convert(Float64, pi) # minimum coordinate
-coordinates_max = convert(Float64, pi) # maximum coordinate
+ref = copy(sol)
 
-# Create a uniformly refined mesh with periodic boundaries
-mesh = TreeMesh(
-    coordinates_min, coordinates_max,
-    initial_refinement_level = 4,
-    n_cells_max = 30_000, # set maximum capacity of tree data structure
-    periodicity = true
-)
+u = copy(ode.u0)
+du = zero(ode.u0)
+res = zero(ode.u0)
 
-function x_trans_periodic(
-        x, domain_length = SVector(oftype(x[1], 2 * pi)),
-        center = SVector(oftype(x[1], 0))
-    )
-    x_normalized = x .- center
-    x_shifted = x_normalized .% domain_length
-    x_offset = (
-        (x_shifted .< -0.5f0 * domain_length) -
-            (x_shifted .> 0.5f0 * domain_length)
-    ) .*
-        domain_length
-    return center + x_shifted + x_offset
-end
+F! = Implicit.nonlinear_problem(Implicit.ImplicitEuler(), ode.f)
+J = Implicit.NewtonKrylov.JacobianOperator(F!, res, u, (ode.u0, 1.0, du, ode.p, 0.0, (), 1))
 
-# Define initial condition
-function initial_condition_diffusive_convergence_test(
-        x, t,
-        equation::LinearScalarAdvectionEquation1D
-    )
-    # Store translated coordinate for easy use of exact solution
-    x_trans = x_trans_periodic(x - equation.advection_velocity * t)
+collect(J)
 
-    nu = diffusivity()
-    c = 0
-    A = 1
-    omega = 1
-    scalar = c + A * sin(omega * sum(x_trans)) * exp(-nu * omega^2 * t)
-    return SVector(scalar)
-end
-initial_condition = initial_condition_diffusive_convergence_test
+using LinearAlgebra
+out = zero(u)
+v = zero(u)
+@time mul!(u, J, v)
+@time F!(res, u, (ode.u0, 1.0, du, ode.p, 0.0, (), 1))
 
-# define periodic boundary conditions everywhere
-boundary_conditions = boundary_condition_periodic
-boundary_conditions_parabolic = boundary_condition_periodic
+F! = Implicit.nonlinear_problem(Implicit.SDIRK2(), ode.f)
+u1 = copy(ode.u0)
+u2 = copy(u1)
+J1 = Implicit.NewtonKrylov.JacobianOperator(F!, res, u1, (ode.u0, 1.0, du, ode.p, 0.0, (u1,), 1))
+J2 = Implicit.NewtonKrylov.JacobianOperator(F!, res, u2, (ode.u0, 1.0, du, ode.p, 0.0, (u1,), 2))
 
-# A semidiscretization collects data structures and functions for the spatial discretization
-semi = SemidiscretizationHyperbolicParabolic(
-    mesh, (equations, equations_parabolic),
-    initial_condition,
-    solver;
-    boundary_conditions = (
-        boundary_conditions,
-        boundary_conditions_parabolic,
-    )
-)
+using LinearAlgebra
+out = zero(u)
+v = zero(u)
+@time F!(res, u, (ode.u0, 1.0, du, ode.p, 0.0, (u1,), 1))
+@time mul!(u, J1, v)
 
-###############################################################################
-# ODE solvers, callbacks etc.
+collect(J1)
+collect(J2)
 
-# Create ODE problem with time span from 0.0 to 1.0
-tspan = (0.0, 1.0)
-ode = semidiscretize(semi, tspan)
+# Cost of time(Jvp) ≈ 2 * time(rhs)
 
-using NewtonKrylov
+# ### Jacobian (of the implicit function given the ode)
+J = Implicit.jacobian(Implicit.ImplicitEuler(), ode, 1.0)
 
-include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
+# ### Solve using ODE interface
 
-# ## Jacobian
-J = jacobian(G_Euler!, ode.f, ode.u0, ode.p, 0.1, first(ode.tspan))
+sol = solve(
+    ode, Implicit.ImplicitEuler();
+    dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
+    ode_default_options()..., callback = callbacks,
+    # verbose=1,
+    krylov_algo = :gmres,
+    # krylov_kwargs=(;verbose=1)
+);
 
-# ## Solve with fixed timestep
+sol = solve(
+    ode, Implicit.ImplicitMidpoint();
+    dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
+    ode_default_options()..., callback = callbacks,
+    # verbose=1,
+    krylov_algo = :gmres,
+    # krylov_kwargs=(;verbose=1)
+);
 
-Δt = 0.01
-ts = first(ode.tspan):Δt:last(ode.tspan)
-solve(G_Euler!, ode.f, ode.u0, ode.p, Δt, ts; verbose = 1, krylov_kwargs = (; verbose = 1))
+sol = solve(
+    ode, Implicit.ImplicitTrapezoid();
+    dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
+    ode_default_options()..., callback = callbacks,
+    # verbose=1,
+    krylov_algo = :gmres,
+    # krylov_kwargs=(;verbose=1)
+);
+
+
+sol = solve(
+    ode, Implicit.TRBDF2();
+    dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
+    ode_default_options()..., callback = callbacks,
+    # verbose=1,
+    krylov_algo = :gmres,
+    # krylov_kwargs=(;verbose=1)
+);
+
+sol = solve(
+    ode, Implicit.ESDIRK2();
+    dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
+    ode_default_options()..., callback = callbacks,
+    # verbose=1,
+    krylov_algo = :gmres,
+    # krylov_kwargs=(;verbose=1)
+);
+
+
+# sol = solve(
+#     ode, Implicit.SDIRK2();
+#     dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
+#     ode_default_options()..., callback = callbacks,
+#     # verbose=1,
+#     krylov_algo = :gmres,
+#     # krylov_kwargs=(;verbose=1)
+# );
+
+# ### Plot the (reference) solution
+
+# We have to manually convert the sol since Implicit has it's own leightweight solution type.
+# Create an extension.
+## pd = PlotData2D(sol.u[end], sol.prob.p)
+
+plot(Trixi.PlotData2DTriangulated(ref.u[1], ref.prob.p))
+
+# ### Plot the solution
+
+plot(Trixi.PlotData2DTriangulated(sol.u[end], sol.prob.p))
+
+# ## Increase CFL numbers
+
+trixi_include(joinpath(examples_dir(), "tree_2d_dgsem", "elixir_advection_basic.jl"), cfl = 10, sol = nothing);
+
+sol = solve(
+    ode, Implicit.ImplicitEuler();
+    dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
+    ode_default_options()..., callback = callbacks,
+    # verbose=1,
+    krylov_algo = :gmres,
+    # krylov_kwargs=(;verbose=1)
+);
+
+@show callbacks.discrete_callbacks[4]
+
+# ### Plot the solution
+
+plot(Trixi.PlotData2DTriangulated(sol.u[end], sol.prob.p))
