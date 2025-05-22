@@ -82,6 +82,10 @@ function (::ImplicitTrapezoid)(res, uₙ, Δt, f!, du, u, p, t)
     return nothing
 end
 
+function nonlinear_problem(alg::SimpleImplicitAlgorithm, f::F) where {F}
+    return (res, u, (uₙ, Δt, du, p, t)) -> alg(res, uₙ, Δt, f, du, u, p, t)
+end
+
 
 # This struct is needed to fake https://github.com/SciML/OrdinaryDiffEq.jl/blob/0c2048a502101647ac35faabd80da8a5645beac7/src/integrators/type.jl#L1
 mutable struct SimpleImplicitOptions{Callback}
@@ -90,13 +94,19 @@ mutable struct SimpleImplicitOptions{Callback}
     dtmax::Float64 # ignored
     maxiters::Int # maximal number of time steps
     tstops::Vector{Float64} # tstops from https://diffeq.sciml.ai/v6.8/basics/common_solver_opts/#Output-Control-1; ignored
+    verbose::Int
+    algo::Symbol
+    krylov_kwargs::Any
 end
 
 
-function SimpleImplicitOptions(callback, tspan; maxiters = typemax(Int), kwargs...)
+function SimpleImplicitOptions(callback, tspan; maxiters = typemax(Int), verbose = 0, krylov_algo = :gmres, krylov_kwargs = (;), kwargs...)
     return SimpleImplicitOptions{typeof(callback)}(
         callback, false, Inf, maxiters,
-        [last(tspan)]
+        [last(tspan)],
+        verbose,
+        krylov_algo,
+        krylov_kwargs
     )
 end
 
@@ -215,12 +225,13 @@ function step!(integrator::SimpleImplicit)
     # one time step
     integrator.u_tmp .= integrator.u
 
-    F!(res, u, (uₙ, Δt, du, p, t)) = alg(res, uₙ, Δt, integrator.f, du, u, p, t)
+    F! = nonlinear_problem(alg, integrator.f)
     _, stats = NewtonKrylov.newton_krylov!(
         F!, integrator.u_tmp, (integrator.u, integrator.dt, integrator.du, integrator.p, integrator.t), integrator.res;
-        # verbose, krylov_kwargs
-        algo = :gmres, tol_abs = 6.0e-6
+        verbose = integrator.opts.verbose, krylov_kwargs = integrator.opts.krylov_kwargs,
+        algo = integrator.opts.algo, tol_abs = 6.0e-6
     )
+    @assert stats.solved
     integrator.u .= integrator.u_tmp
 
 
@@ -277,12 +288,14 @@ function Base.resize!(integrator::SimpleImplicit, new_size)
 end
 
 ### Helper
+jacobian(G!, ode::ODEProblem, Δt) = jacobian(G!, ode.f, ode.u0, ode.p, Δt, first(ode.tspan))
+
 function jacobian(G!, f!, uₙ, p, Δt, t)
     u = copy(uₙ)
     du = zero(uₙ)
     res = zero(uₙ)
 
-    F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
+    F! = nonlinear_problem(G!, f!)
 
     J = NewtonKrylov.JacobianOperator(F!, res, u, (uₙ, Δt, du, p, t))
     return collect(J)
