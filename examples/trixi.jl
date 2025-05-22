@@ -122,13 +122,8 @@ callbacks = CallbackSet(
 using NewtonKrylov
 using Implicit
 
-module Simple
-    using NewtonKrylov
-    include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
-end
-
 # ## Jacobian
-J = Simple.jacobian(Implicit.ImplicitEuler(), ode.f, ode.u0, ode.p, 0.1, first(ode.tspan))
+J = Implicit.jacobian(Implicit.ImplicitEuler(), ode.f, ode.u0, ode.p, 0.1, first(ode.tspan))
 
 # ## Solve with explicit timesteps
 

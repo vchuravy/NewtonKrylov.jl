@@ -17,7 +17,7 @@ abstract type AbstractTimeIntegrator end
 import DiffEqBase
 
 import DiffEqBase: solve, CallbackSet, ODEProblem
-export solve
+export solve, ODEProblem
 
 # Interface required by DiffEqCallbacks.jl
 function DiffEqBase.get_tstops(integrator::AbstractTimeIntegrator)
@@ -274,6 +274,18 @@ function Base.resize!(integrator::SimpleImplicit, new_size)
     resize!(integrator.u, new_size)
     resize!(integrator.du, new_size)
     return resize!(integrator.u_tmp, new_size)
+end
+
+### Helper
+function jacobian(G!, f!, uₙ, p, Δt, t)
+    u = copy(uₙ)
+    du = zero(uₙ)
+    res = zero(uₙ)
+
+    F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
+
+    J = NewtonKrylov.JacobianOperator(F!, res, u, (uₙ, Δt, du, p, t))
+    return collect(J)
 end
 
 end # module Implicit
