@@ -1,6 +1,6 @@
 # BVP from (Kelley2022)[@cite]
 
-using NewtonKrylov, Krylov, LinearAlgebra
+using Ariadne, Krylov, LinearAlgebra
 
 function Phi(t, tdag, vp, v)
     phi = 4.0 * tdag * vp + (t * v - 1.0) * v

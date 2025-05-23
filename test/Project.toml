@@ -2,7 +2,7 @@
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Enzyme = "7da242da-08ed-463a-9acd-ee780be4f1d9"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-NewtonKrylov = "0be81120-40bf-4f8b-adf0-26103efb66f1"
+Ariadne = "0be81120-40bf-4f8b-adf0-26103efb66f1"
 
-[sources.NewtonKrylov]
+[sources.Ariadne]
 path = ".."

@@ -1,6 +1,6 @@
-pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add NewtonKrylov to environment stack
+pushfirst!(LOAD_PATH, joinpath(@__DIR__, "..")) # add Ariadne to environment stack
 
-using NewtonKrylov
+using Ariadne
 using Documenter
 import Documenter.Remotes: GitHub
 using Literate
@@ -29,7 +29,7 @@ if get(ENV, "BUILD_DOCS_NOTEBOOKS", "true") == "true"
 end
 
 
-DocMeta.setdocmeta!(NewtonKrylov, :DocTestSetup, :(using NewtonKrylov); recursive = true)
+DocMeta.setdocmeta!(Ariadne, :DocTestSetup, :(using Ariadne); recursive = true)
 
 
 ##
@@ -61,13 +61,13 @@ examples = [title => joinpath("generated", string(name, ".md")) for (title, name
 bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"))
 
 makedocs(;
-    modules = [NewtonKrylov],
+    modules = [Ariadne],
     authors = "Valentin Churavy",
-    repo = GitHub("vchuravy", "NewtonKrylov.jl"),
-    sitename = "NewtonKrylov.jl",
+    repo = GitHub("vchuravy", "Ariadne.jl"),
+    sitename = "Ariadne.jl",
     format = Documenter.HTML(;
         prettyurls = get(ENV, "CI", "false") == "true",
-        canonical = "https://vchuravy.dev/NewtonKrylov.jl",
+        canonical = "https://vchuravy.dev/Ariadne.jl",
         assets = [
             asset(
                 "https://plausible.io/js/plausible.js",
@@ -93,7 +93,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo = "github.com/vchuravy/NewtonKrylov.jl.git",
+    repo = "github.com/vchuravy/Ariadne.jl.git",
     devbranch = "main",
     push_preview = true,
 )

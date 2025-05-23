@@ -28,7 +28,7 @@ begin
 end
 
 # ╔═╡ 32e51b56-268b-11f0-2d27-f3a6d736affe
-@revise using NewtonKrylov
+@revise using Ariadne
 
 # ╔═╡ 42460e8e-91ea-488f-9833-c660d26bad75
 using SummationByPartsOperators
@@ -37,7 +37,7 @@ using SummationByPartsOperators
 using LinearAlgebra
 
 # ╔═╡ 5bffc041-0019-4f1f-9711-170b82f62926
-Implicit = @ingredients(joinpath(dirname(pathof(NewtonKrylov)), "../examples/implicit.jl"));
+Implicit = @ingredients(joinpath(dirname(pathof(Ariadne)), "../examples/implicit.jl"));
 
 # ╔═╡ 493850fa-87db-452d-961a-26f92c88d18f
 md"""

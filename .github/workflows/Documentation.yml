@@ -31,9 +31,9 @@ jobs:
         run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using NewtonKrylov
-            DocMeta.setdocmeta!(NewtonKrylov, :DocTestSetup, :(using NewtonKrylov); recursive=true)
-            doctest(NewtonKrylov)
+            using Ariadne
+            DocMeta.setdocmeta!(Ariadne, :DocTestSetup, :(using Ariadne); recursive=true)
+            doctest(Ariadne)
           '
       - name: generate docs
         run: julia --project=docs docs/make.jl

@@ -1,4 +1,4 @@
-# NewtonKrylov.jl
+# Ariadne.jl
 
 Newton Method using Krylov.jl (montoison-orban-2023)[@cite]
 
@@ -12,15 +12,15 @@ newton_krylov
 ### Parameters
 
 ```@docs
-NewtonKrylov.Forcing
-NewtonKrylov.Fixed
-NewtonKrylov.EisenstatWalker
+Ariadne.Forcing
+Ariadne.Fixed
+Ariadne.EisenstatWalker
 ```
 
 ### Internal
 
 ```@docs
-NewtonKrylov.JacobianOperator
+Ariadne.JacobianOperator
 ```
 
 ## Bibliography

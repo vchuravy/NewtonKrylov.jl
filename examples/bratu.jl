@@ -1,7 +1,7 @@
 # # 1D bratu equation from (Kan2022-ko)[@cite]
 
 # ## Necessary packages
-using NewtonKrylov, Krylov
+using Ariadne, Krylov
 using KrylovPreconditioners
 using SparseArrays, LinearAlgebra
 using CairoMakie
@@ -94,7 +94,7 @@ _, stats = newton_krylov!(
     bratu!,
     copy(u₀), (dx, λ), similar(u₀);
     algo = :cg,
-    forcing = NewtonKrylov.Fixed(0.1)
+    forcing = Ariadne.Fixed(0.1)
 )
 stats
 

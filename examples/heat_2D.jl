@@ -1,12 +1,12 @@
 # # Implicit time-integration
 
 # ## Necessary packages
-using NewtonKrylov
+using Ariadne
 using CairoMakie
 using OffsetArrays
 
-include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
-include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "halovector.jl"))
+include(joinpath(dirname(pathof(Ariadne)), "..", "examples", "implicit.jl"))
+include(joinpath(dirname(pathof(Ariadne)), "..", "examples", "halovector.jl"))
 
 # ## Diffusion 2D
 

@@ -1,7 +1,7 @@
 # # [Implicit schemes](@id implicit_schemes)
-using NewtonKrylov
+using Ariadne
 
-using NewtonKrylov
+using Ariadne
 
 # ## Implicit Euler
 
@@ -45,7 +45,7 @@ function jacobian(G!, f!, uₙ, p, Δt, t)
 
     F!(res, u, (uₙ, Δt, du, p, t)) = G!(res, uₙ, Δt, f!, du, u, p, t)
 
-    J = NewtonKrylov.JacobianOperator(F!, res, u, (uₙ, Δt, du, p, t))
+    J = Ariadne.JacobianOperator(F!, res, u, (uₙ, Δt, du, p, t))
     return collect(J)
 end
 

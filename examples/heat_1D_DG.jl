@@ -1,14 +1,14 @@
 # # Implicit time-integration (With DG)
 
 # ## Necessary packages
-using NewtonKrylov
+using Ariadne
 using CairoMakie
 using LinearAlgebra
 using SummationByPartsOperators
 
 # Include the implicit time-steppers from [`Implicit schemes`](@ref implicit_schemes)
 
-include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"));
+include(joinpath(dirname(pathof(Ariadne)), "..", "examples", "implicit.jl"));
 
 # ## Setting up the space discretization
 xmin = 0.0
