@@ -10,11 +10,13 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 NewtonKrylov = "0be81120-40bf-4f8b-adf0-26103efb66f1"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
+OrdinaryDiffEqLowStorageRK = "b0944070-b475-4768-8dec-fb6eb410534d"
+OrdinaryDiffEqSSPRK = "669c94d9-1f4b-4b64-b377-1aa079aa2388"
 PlutoStaticHTML = "359b1769-a58e-495b-9770-312e911026ad"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SummationByPartsOperators = "9f78cca6-572e-554e-b819-917d2f1cf240"
 Trixi = "a7f1ee26-1774-49b1-8366-f1abc58fbfcb"
 
 [sources]
-NewtonKrylov = {path = ".."}
 Implicit = {path = "../libs/Implicit"}
+NewtonKrylov = {path = ".."}
