@@ -1,12 +1,8 @@
 # # Implicit time-integration (Spring example)
 
 # ## Necessary packages
-using NewtonKrylov
+using Implicit
 using CairoMakie
-
-# Include the implicit time-steppers from [`Implicit schemes`](@ref implicit_schemes)
-
-include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
 
 # ## Spring equations
 
