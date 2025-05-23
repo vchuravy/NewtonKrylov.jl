@@ -1,5 +1,5 @@
 using Test
-using NewtonKrylov
+using Ariadne
 
 function F!(res, x, _)
     res[1] = x[1]^2 + x[2]^2 - 2
@@ -22,7 +22,7 @@ let x₀ = [3.0, 5.0]
     @test stats.solved
 end
 
-import NewtonKrylov: JacobianOperator
+import Ariadne: JacobianOperator
 using Enzyme, LinearAlgebra
 
 @testset "Jacobian" begin
