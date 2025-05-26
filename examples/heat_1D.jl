@@ -1,10 +1,10 @@
 # # Implicit time-integration
 
 # ## Necessary packages
-using NewtonKrylov
+using Ariadne
 using CairoMakie
 
-include(joinpath(dirname(pathof(NewtonKrylov)), "..", "examples", "implicit.jl"))
+include(joinpath(dirname(pathof(Ariadne)), "..", "examples", "implicit.jl"))
 
 # ## Heat 1D
 # $ \frac{\partial u(x, t)}{\partial t} = a * \frac{\partial^2 u(x, t)}{\partial x^2 $

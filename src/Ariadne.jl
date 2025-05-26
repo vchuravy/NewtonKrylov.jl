@@ -1,4 +1,4 @@
-module NewtonKrylov
+module Ariadne
 
 export newton_krylov, newton_krylov!
 
@@ -371,4 +371,4 @@ function newton_krylov!(
     return u, (; solved = n_res <= tol, stats, t)
 end
 
-end # module NewtonKrylov
+end # module Ariadne

@@ -1,7 +1,7 @@
 # # 1D bratu equation from (Kan2022-ko)[@cite]
 
 # ## Necessary packages
-using NewtonKrylov, Krylov
+using Ariadne, Krylov
 using KrylovPreconditioners
 using SparseArrays, LinearAlgebra
 using CairoMakie
