@@ -1,7 +1,7 @@
 module Implicit
 
 using UnPack
-import NewtonKrylov
+import Ariadne
 
 # Wrapper type for solutions from Implicit.jl's own time integrators, partially mimicking
 # SciMLBase.ODESolution
@@ -54,31 +54,18 @@ abstract type SimpleImplicitAlgorithm{N} end
 
 stages(::SimpleImplicitAlgorithm{N}) where {N} = N
 
-"""
-```
-1 | 1
---|--
-  | 1
-```
-"""
 struct ImplicitEuler <: SimpleImplicitAlgorithm{1} end
 function (::ImplicitEuler)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
-    f!(du, u, p, t) # t = t0 + c_1 * Δt
+    f!(du, u, p, t + Δt) # t = t0 + c_1 * Δt
 
     res .= uₙ .+ Δt .* du .- u # Δt * a_11
     return nothing
 end
 
-"""
-```
-1/2 | 1/2
-----|----
-    | 1
-```
-"""
 struct ImplicitMidpoint <: SimpleImplicitAlgorithm{1} end
 function (::ImplicitMidpoint)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
-    ## Use res for a temporary allocation (uₙ .+ u) ./ 2
+    # Evaluate f at midpoint: f((uₙ + u)/2, t + Δt/2)
+    # Use res for a temporary allocation (uₙ .+ u) ./ 2
     uuₙ = res
     uuₙ .= 0.5 .* (uₙ .+ u)
     f!(du, uuₙ, p, t + 0.5 * Δt)
@@ -87,17 +74,11 @@ function (::ImplicitMidpoint)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
     return nothing
 end
 
-"""
-```
-0 |  0   0
-1 | 1/2 1/2
---|--------
-  | 1/2 1/2
-```
-"""
 struct ImplicitTrapezoid <: SimpleImplicitAlgorithm{1} end
 function (::ImplicitTrapezoid)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
-    ## Use res as the temporary
+    # Need to evaluate f at both endpoints
+    # f(uₙ, t) and f(u, t + Δt)
+    # Use res as the temporary for duₙ = f(uₙ, t)
     duₙ = res
     f!(duₙ, uₙ, p, t)
     f!(du, u, p, t + Δt)
@@ -106,102 +87,78 @@ function (::ImplicitTrapezoid)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
     return nothing
 end
 
+# Note: Claude came up with these hallucinated coefficients
+# they work better, but it is not clear to me how they are derived
+# solves "tree_2d_dgsem/elixir_advection_basic.jl" to
+#    L2 error:       8.23531944e+06
+#    Linf error:     1.16541673e+07
+#    ∑∂S/∂U ⋅ Uₜ :  -1.15789737e+05
+# a₁ = -(1 - γ)^2 / γ^2 # r^2 ≈ 0.5
+# a₂ = 1 / γ^2
+# a₃ = (1 - γ)^2 / (γ * (2 - γ))
+# res .= a₁ .* uₙ .+ a₂ .* u₁ .+  a₃ .* Δt .* du .- u
+
+
+"""
+    TRBDF2
+
+TR-BDF2 based solver after [Bank1985-gh](@cite).
+Using the formula given in [Bonaventura2021-za](@cite) eq (1).
+See [Hosea1996-xv](@cite) for how it relates
+"""
 struct TRBDF2 <: SimpleImplicitAlgorithm{2} end
 function (::TRBDF2)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
     γ = 2 - √2
     return if stage == 1
-        # Stage 1: Trapezoidal to t + γΔt
+        # Stage 1: Trapezoidal rule to t + γΔt
+        # u here is u₁ candidate
         duₙ = res
         f!(duₙ, uₙ, p, t)
         f!(du, u, p, t + γ * Δt)
 
-        res .= uₙ .+ (γ * Δt / 2) .* (duₙ .+ du) .- u
+        res .= uₙ .+ ((γ / 2) * Δt) .* (duₙ .+ du) .- u
     else
-        u₁ = stages[1]
+        # Stage 2: BDF2 from t + γΔt to t + Δt
+        # Note these are unequal timestep
         f!(du, u, p, t + Δt)
 
-        # BDF2 coefficients
-        c₁ = 1 / γ^2
-        c₂ = -(1 - γ)^2 / γ^2
-        c₃ = (1 - γ)^2 * Δt / (γ * (2 - γ))
+        u₁ = stages[1]
 
-        res .= c₁ .* u₁ .+ c₂ .* uₙ .+ c₃ .* du .- u
+        # Bank1985 defines in eq 32
+        # (2-γ)u + (1-γ)Δt * f(u, t+Δt) = 1/γ * u₁ - 1/γ * (1-γ)^2 * uₙ
+        # Manual derivation (devision by (2-γ) and then move everything to one side.)
+        # solves "tree_2d_dgsem/elixir_advection_basic.jl" to
+        #   L2 error:       3.14058365e-01
+        #   Linf error:     4.55832844e-01
+        #   ∑∂S/∂U ⋅ Uₜ :  -3.09686107e-04
+        # a₁ = -((1 - γ)^2) / (γ * (2 - γ))
+        # a₂ = 1 / (γ * (2 - γ))
+        # a₃ = - (1 - γ) / (2 - γ)
+        # res .= a₁ .* uₙ .+ a₂ .* u₁ .+  a₃ .* Δt .* du .- u
+
+        # after Bonaventura2021
+        # solves "tree_2d_dgsem/elixir_advection_basic.jl" to
+        #   L2 error:       1.71224434e-04
+        #   Linf error:     2.52822142e-04
+        #   ∑∂S/∂U ⋅ Uₜ :  -1.97551209e-09
+        # They define the second stage as:
+        # u - γ₂ * Δt * f(u, t+Δt) = (1-γ₃)uₙ + γ₃u₁
+        # Which differs from Bank1985
+        # (2-γ)u + (1-γ)Δt * f(u, t+Δt) = 1/γ * u₁ - 1/γ * (1-γ)^2 * uₙ
+        # In the sign of u - γ₂ * Δt
+        # a₁ == (1-γ₃)
+        # a₂ == γ₃
+        # a₃ == -γ₂
+        γ₂ = (1 - γ) / (2 - γ)
+        γ₃ = 1 / (γ * (2 - γ))
+
+        res .= (1 - γ₃) .* uₙ .+ γ₃ .* u₁ + (γ₂ * Δt) .* du .- u
     end
 end
-
-# struct ESDIRK2 <: SimpleImplicitAlgorithm{2} end
-# function (::ESDIRK2)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
-#     # Standard ESDIRK2 parameters
-#     γ = 1 - 1/√2  # ≈ 0.2928932188134525
-#     a₂₁ = 1 - γ   # ≈ 0.7071067811865476
-#     # # Alternative parameter set
-#     # γ = (2 + √2) / 4  # ≈ 0.8535533905932738
-#     # a₂₁ = (2 - √2) / 4  # ≈ 0.1464466094067262
-
-#     if stage == 1
-#         # Stage 1: Explicit stage
-#         # k₁ = f(tₙ, uₙ)
-#         # u₁ = uₙ + γΔt * k₁
-#         # This is explicit, so no nonlinear solve needed
-#         f!(du, uₙ, p, t)
-#         res .= uₙ .+ γ * Δt .* du .- u
-#     else
-#         # Stage 2: Implicit stage
-#         # k₂ = f(tₙ + γΔt, u₁) (from stage 1)
-#         # u₂ = uₙ + Δt(a₂₁ * k₁ + γ * k₂)
-#         #    = uₙ + Δt((1-γ) * k₁ + γ * k₂)
-
-#         u₁ = stages[1]
-
-#         # Get k₁ = (u₁ - uₙ) / (γΔt) from the explicit stage 1 result
-#         k₁ = res
-#         k₁ .= (u₁ .- uₙ) ./ (γ * Δt)
-
-#         # k₂ = f(tₙ + γΔt, u₂) - this is what we're solving for
-#         f!(du, u, p, t + γ * Δt)
-
-#         res .= uₙ .+ Δt .* (a₂₁ .* k₁ .+ γ .* du) .- u
-#     end
-# end
-
-# """
-# SDIRK2 (γ = (2-√2)/2 ≈ 0.293)
-# ```
-# ```
-# γ   |  γ   0
-# 1-γ | 1-2γ γ
-# ----|--------
-#     | 1/2 1/2
-# ```
-# """
-# struct SDIRK2 <: SimpleImplicitAlgorithm{2} end
-
-# function (::SDIRK2)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
-#     γ = (2 + √2) / 4  # ≈ 0.8535533905932738
-#     a₂₁ = (2 - √2) / 4  # ≈ 0.1464466094067262
-
-#     if stage == 1
-#         # Stage 1: Implicit
-#         f!(du, u, p, t + γ * Δt)
-#         res .= uₙ .+ γ * Δt .* du .- u
-#     elseif stage == 2
-#         # Stage 2: Implicit
-#         u₁ = stages[1]
-#         k₁ = res
-#         k₁ .= (u₁ .- uₙ) ./ (γ * Δt)
-
-#         # Compute f(u₂, t + (1-γ)*Δt)
-#         f!(du, u, p, t + (1 - γ) * Δt)
-
-#         res .= uₙ .+ Δt .* (a₂₁ .* k₁ .+ γ .* du) .- u
-#     end
-#     return nothing
-# end
 
 function nonlinear_problem(alg::SimpleImplicitAlgorithm, f::F) where {F}
     return (res, u, (uₙ, Δt, du, p, t, stages, stage)) -> alg(res, uₙ, Δt, f, du, u, p, t, stages, stage)
 end
-
 
 # This struct is needed to fake https://github.com/SciML/OrdinaryDiffEq.jl/blob/0c2048a502101647ac35faabd80da8a5645beac7/src/integrators/type.jl#L1
 mutable struct SimpleImplicitOptions{Callback}
@@ -341,17 +298,18 @@ function step!(integrator::SimpleImplicit)
     end
 
     # one time step
-    integrator.u_tmp
+    integrator.u_tmp .= integrator.u
     for stage in 1:stages(alg)
         F! = nonlinear_problem(alg, integrator.f)
         # TODO: Pass in `stages[1:(stage-1)]` or full tuple?
-        _, stats = NewtonKrylov.newton_krylov!(
+        _, stats = Ariadne.newton_krylov!(
             F!, integrator.u_tmp, (integrator.u, integrator.dt, integrator.du, integrator.p, integrator.t, integrator.stages, stage), integrator.res;
             verbose = integrator.opts.verbose, krylov_kwargs = integrator.opts.krylov_kwargs,
             algo = integrator.opts.algo, tol_abs = 6.0e-6
         )
         @assert stats.solved
         if stage < stages(alg)
+            # Store the solution for each stage in stages
             integrator.stages[stage] .= integrator.u_tmp
         end
     end
@@ -419,7 +377,7 @@ function jacobian(G!, f!, uₙ, p, Δt, t)
 
     F! = nonlinear_problem(G!, f!)
 
-    J = NewtonKrylov.JacobianOperator(F!, res, u, (uₙ, Δt, du, p, t))
+    J = Ariadne.JacobianOperator(F!, res, u, (uₙ, Δt, du, p, t))
     return collect(J)
 end
 

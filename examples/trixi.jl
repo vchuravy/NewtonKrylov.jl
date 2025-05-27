@@ -1,4 +1,4 @@
-# # Using the NewtonKrylov.jl based implicit solver with Trixi.jl
+# # Using the an implicit solver based on Ariadne with Trixi.jl
 
 using Trixi
 using Implicit
@@ -20,8 +20,8 @@ using CairoMakie
 @assert !Trixi._PREFERENCE_LOOPVECTORIZATION
 
 # ## Load Trixi Example
-trixi_include(joinpath(examples_dir(), "tree_2d_dgsem", "elixir_advection_basic.jl"), sol = nothing);
-# trixi_include(joinpath(examples_dir(), "tree_2d_dgsem", "elixir_advection_basic.jl"));
+# trixi_include(joinpath(examples_dir(), "tree_2d_dgsem", "elixir_advection_basic.jl"), sol = nothing);
+trixi_include(joinpath(examples_dir(), "tree_2d_dgsem", "elixir_advection_basic.jl"));
 
 ref = copy(sol)
 
@@ -30,7 +30,7 @@ du = zero(ode.u0)
 res = zero(ode.u0)
 
 F! = Implicit.nonlinear_problem(Implicit.ImplicitEuler(), ode.f)
-J = Implicit.NewtonKrylov.JacobianOperator(F!, res, u, (ode.u0, 1.0, du, ode.p, 0.0, (), 1))
+J = Implicit.Ariadne.JacobianOperator(F!, res, u, (ode.u0, 1.0, du, ode.p, 0.0, (), 1))
 
 collect(J)
 
@@ -43,8 +43,8 @@ v = zero(u)
 F! = Implicit.nonlinear_problem(Implicit.SDIRK2(), ode.f)
 u1 = copy(ode.u0)
 u2 = copy(u1)
-J1 = Implicit.NewtonKrylov.JacobianOperator(F!, res, u1, (ode.u0, 1.0, du, ode.p, 0.0, (u1,), 1))
-J2 = Implicit.NewtonKrylov.JacobianOperator(F!, res, u2, (ode.u0, 1.0, du, ode.p, 0.0, (u1,), 2))
+J1 = Implicit.Ariadne.JacobianOperator(F!, res, u1, (ode.u0, 1.0, du, ode.p, 0.0, (u1,), 1))
+J2 = Implicit.Ariadne.JacobianOperator(F!, res, u2, (ode.u0, 1.0, du, ode.p, 0.0, (u1,), 2))
 
 using LinearAlgebra
 out = zero(u)
@@ -99,24 +99,14 @@ sol = solve(
     # krylov_kwargs=(;verbose=1)
 );
 
+import OrdinaryDiffEqSDIRK
+import DifferentiationInterface: AutoFiniteDiff
 sol = solve(
-    ode, Implicit.ESDIRK2();
+    ode, OrdinaryDiffEqSDIRK.TRBDF2(autodiff = AutoFiniteDiff());
     dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
     ode_default_options()..., callback = callbacks,
-    # verbose=1,
-    krylov_algo = :gmres,
-    # krylov_kwargs=(;verbose=1)
+    adaptive = false
 );
-
-
-# sol = solve(
-#     ode, Implicit.SDIRK2();
-#     dt = 1.0, # solve needs some value here but it will be overwritten by the stepsize_callback
-#     ode_default_options()..., callback = callbacks,
-#     # verbose=1,
-#     krylov_algo = :gmres,
-#     # krylov_kwargs=(;verbose=1)
-# );
 
 # ### Plot the (reference) solution
 
