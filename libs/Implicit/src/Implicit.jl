@@ -87,24 +87,12 @@ function (::ImplicitTrapezoid)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
     return nothing
 end
 
-# Note: Claude came up with these hallucinated coefficients
-# they work better, but it is not clear to me how they are derived
-# solves "tree_2d_dgsem/elixir_advection_basic.jl" to
-#    L2 error:       8.23531944e+06
-#    Linf error:     1.16541673e+07
-#    ∑∂S/∂U ⋅ Uₜ :  -1.15789737e+05
-# a₁ = -(1 - γ)^2 / γ^2 # r^2 ≈ 0.5
-# a₂ = 1 / γ^2
-# a₃ = (1 - γ)^2 / (γ * (2 - γ))
-# res .= a₁ .* uₙ .+ a₂ .* u₁ .+  a₃ .* Δt .* du .- u
-
-
 """
     TRBDF2
 
 TR-BDF2 based solver after [Bank1985-gh](@cite).
 Using the formula given in [Bonaventura2021-za](@cite) eq (1).
-See [Hosea1996-xv](@cite) for how it relates
+See [Hosea1996-xv](@cite) for how it relates to implicit RK methods
 """
 struct TRBDF2 <: SimpleImplicitAlgorithm{2} end
 function (::TRBDF2)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
@@ -127,20 +115,12 @@ function (::TRBDF2)(res, uₙ, Δt, f!, du, u, p, t, stages, stage)
         # Bank1985 defines in eq 32
         # (2-γ)u + (1-γ)Δt * f(u, t+Δt) = 1/γ * u₁ - 1/γ * (1-γ)^2 * uₙ
         # Manual derivation (devision by (2-γ) and then move everything to one side.)
-        # solves "tree_2d_dgsem/elixir_advection_basic.jl" to
-        #   L2 error:       3.14058365e-01
-        #   Linf error:     4.55832844e-01
-        #   ∑∂S/∂U ⋅ Uₜ :  -3.09686107e-04
         # a₁ = -((1 - γ)^2) / (γ * (2 - γ))
         # a₂ = 1 / (γ * (2 - γ))
         # a₃ = - (1 - γ) / (2 - γ)
         # res .= a₁ .* uₙ .+ a₂ .* u₁ .+  a₃ .* Δt .* du .- u
 
         # after Bonaventura2021
-        # solves "tree_2d_dgsem/elixir_advection_basic.jl" to
-        #   L2 error:       1.71224434e-04
-        #   Linf error:     2.52822142e-04
-        #   ∑∂S/∂U ⋅ Uₜ :  -1.97551209e-09
         # They define the second stage as:
         # u - γ₂ * Δt * f(u, t+Δt) = (1-γ₃)uₙ + γ₃u₁
         # Which differs from Bank1985
